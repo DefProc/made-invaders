@@ -1,0 +1,20 @@
+rfm69hw
+
+Pin,    Type,   Name,   Side
+1,      input,  RESET,  left
+2,      bidir,  DIO0,   left
+3,      bidir,  DIO1,   left
+4,      bidir,  DIO2,   left
+5,      bidir,  DIO3,   left
+6,      bidir,  DIO4,   left
+7,      bidir,  DIO5,   left
+8,      power,  3.3V,   left
+9,      power,  GND,    right
+10,     open_emit, ANA, right
+11,     power,  GND,    right
+12,     input,  SCK,    right
+13,     output, MISO,   right
+14,     input,  MOSI,   right
+15,     input,  NSS,    right
+16,     nc,     NC,     right
+
