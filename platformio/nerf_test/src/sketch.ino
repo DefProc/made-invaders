@@ -1,5 +1,6 @@
 #include "FastLED.h"
 #include <SdFat.h>
+#include <TimerOne.h>
 SdFat sd;
 SdFile myFile;
 
@@ -24,15 +25,21 @@ const unsigned char PS_16 = (1 << ADPS2);
 const unsigned char PS_128 = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
 
 //System Setup
+volatile boolean
+  changeImage = false; // should we change the image to the next one?
 boolean
   singleGraphic = false, // single BMP file
-  setupActive = false, // set brightness, playback mode, etc.
-  changeImage = false; // should we change the image to the next one?
+  setupActive = false; // set brightness, playback mode, etc.
 int
   offsetX = 0, // for translating images x pixels
   offsetY = 0; // for translating images y pixels
 uint8_t
+  analogThreshold = 70, // above what value should we take a reading as activated
   currentImage = 0; // which image are we looking at
+uint32_t
+  impactRepeat = 500UL; // debounce timeout for the sensor
+volatile uint32_t
+  lastImpact = 0UL; // when did we last see a hit
 
 // The invader logo (9×9 leds)
 const uint8_t invader[NUM_LEDS][3] = {
@@ -48,6 +55,8 @@ const uint8_t invader[NUM_LEDS][3] = {
 };
 
 void setup() {
+  Serial.begin(9600);
+  Serial.println("starting nerf_test");
   // set up the ADC sampling speed
   ADCSRA &= ~PS_128;  // remove bits set by Arduino library
   ADCSRA |= PS_16;    // set the prescaler to 16 (1MHz)
@@ -76,24 +85,29 @@ void setup() {
   }
   FastLED.show();
   delay(2500);
+
+  // Start the fast interrupt for the analog read
+  pinMode(A0, INPUT);
+  Timer1.initialize(10000); // run at 100Hz
+  Timer1.attachInterrupt(checkImpact);
 }
 
 void fadeall() { for(int i = 0; i < NUM_LEDS; i++) { leds[i].nscale8(250); } }
 
 void loop() {
-  if (analogRead(A0) >= 10) {
-    changeImage = true;
-  }
   if (changeImage == true) {
     char filename_buffer[13];
     sprintf(filename_buffer, "%04d.bmp", currentImage);
     if (sd.exists(filename_buffer)) {
+      Serial.print("Displaying ");
+      Serial.println(filename_buffer);
       bmpDraw(filename_buffer, 0, 0);
-      delay(1000);
       changeImage = false;
     } else {
-      currentImage++;
+      Serial.print(filename_buffer);
+      Serial.println(" doesn't exist");
     }
+    currentImage++;
   }
 }
 
@@ -125,6 +139,13 @@ void colour_wipe() {
     fadeall();
     // Wait a little bit before we loop around and do it again
     delay(10);
+  }
+}
+
+void checkImpact() {
+  if (analogRead(A0) >= analogThreshold && millis() - lastImpact >= impactRepeat) {
+    changeImage = true;
+    lastImpact = millis();
   }
 }
 
