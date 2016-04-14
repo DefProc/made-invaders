@@ -7,7 +7,7 @@ SdFile myFile;
 #define BUFFPIXEL 1
 
 // How many leds in your strip?
-#define NUM_LEDS 81
+#define NUM_LEDS 90
 
 // For led chips like Neopixels, which have a data line, ground, and power, you just
 // need to define DATA_PIN.  For led chipsets that are SPI based (four wires - data, clock,
@@ -41,19 +41,6 @@ uint32_t
 volatile uint32_t
   lastImpact = 0UL; // when did we last see a hit
 
-// The invader logo (9×9 leds)
-const uint8_t invader[NUM_LEDS][3] = {
-  {46,10,4},{46,10,4},{130,28,11},{110,23,9},{93,20,8},{80,37,67},{71,68,166},{56,123,196},{62,198,204},
-  {47,127,212},{79,70,166},{128,53,88},{255,255,255},{43,9,3},{255,255,255},{147,63,12},{48,97,3},{0,0,0},
-  {46,137,3},{91,103,104},{255,255,255},{255,255,255},{255,255,255},{255,255,255},{255,255,255},{128,27,11},{30,38,99},
-  {93,20,8},{58,12,5},{255,255,255},{92,51,7},{255,255,255},{0,164,0},{255,255,255},{118,60,115},{22,4,1},
-  {74,15,5},{255,255,255},{255,255,255},{255,255,255},{255,255,255},{255,255,255 },{255,255,255},{255,255,255},{0,0,0},
-  {46,10,4},{255,255,255},{40,89,63},{255,255,255},{124,79,32},{255,255,255},{128,96,63},{255,255,255},{63,45,4},
-  {57,56,64},{255,255,255},{27,170,98},{255,255,255},{64,82,156},{255,255,255},{69,69,38},{255,255,255},{69,72,179},
-  {114,44,69},{76,64,150},{64,73,148},{88,50,6},{58,12,5},{101,21,8},{153,32,12},{116,25,10},{0,0,0},
-  {0,0,0},{162,35,14},{106,22,8},{58,12,5},{58,12,5},{101,21,8},{101,21,8},{22,4,1},{22,4,1}
-};
-
 void setup() {
   Serial.begin(9600);
   Serial.println("starting nerf_test");
@@ -66,7 +53,7 @@ void setup() {
   FastLED.addLeds<WS2812,DATA_PIN,RGB>(leds,NUM_LEDS);
   FastLED.setBrightness(84);
 
-  if (!sd.begin(10, SPI_HALF_SPEED)) {
+  if (!sd.begin(4, SPI_HALF_SPEED)) {
     sd.initErrorHalt();
   } else {
     Serial.println(F("SD began"));
@@ -78,12 +65,7 @@ void setup() {
   colour_wipe();
 
   // draw the invader logo
-  for (int i=0; i<NUM_LEDS; i++) {
-    leds[i].r = invader[i][0];
-    leds[i].g = invader[i][1];
-    leds[i].b = invader[i][2];
-  }
-  FastLED.show();
+  bmpDraw("invader.bmp", 0, 0);
   delay(2500);
 
   // Start the fast interrupt for the analog read
@@ -355,7 +337,7 @@ uint32_t read32(SdFile& f) {
 
 void clearStripBuffer()
 {
-  for (int i=0; i<81; i++)
+  for (int i=0; i<NUM_LEDS; i++)
   {
     leds[i] = CRGB::Black;
   }
@@ -368,11 +350,11 @@ byte getIndex(byte x, byte y)
   {
     // even lines are the right way round
     // (0,2,4,6,8)
-    index = y * 9 + x;
+    index = y * 10 + x;
   } else {
     // odd number lines are reversed direction
     // (1,3,5,7,9)
-    index = (y * 9 + 8) - x;
+    index = (y * 10 + 9) - x - 1;
   }
   return index;
 }
