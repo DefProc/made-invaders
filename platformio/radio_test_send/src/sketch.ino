@@ -118,7 +118,10 @@ void loop() {
       myPacket.message_id = HIT;
       myPacket.impact_num++;
       myPacket.timestamp = millis();
-      if (radio.sendWithRetry(GATEWAYID, (const void*)(&myPacket), sizeof(myPacket))) {
+      // send just to the gateway, with an ACK check and default 2 trys
+      //if (radio.sendWithRetry(GATEWAYID, (const void*)(&myPacket), sizeof(myPacket))) {
+      // send broadcast, with no ACK check
+      //if (radio.send(0xFF, (const void*)(&myPacket), sizeof(myPacket)), false) {
         Serial.println(F("sent impact message"));
       } else {
         Serial.println(F("no radio message sent"));

@@ -45,6 +45,9 @@ void setup() {
   radio.setHighPower(); //uncomment only for RFM69HW!
 #endif
   radio.encrypt(ENCRYPTKEY);
+  // set promiscuous mode to see all the packets on the network
+  // no matter the intended recipient
+  //radio.promiscuous(true);
 }
 
 uint16_t ackCount = 0;
