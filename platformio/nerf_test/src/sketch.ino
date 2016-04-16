@@ -9,6 +9,9 @@ SdFile myFile;
 // How many leds in your strip?
 #define NUM_LEDS 90
 
+// How many numbered images on the SD card?
+#define NUM_IMAGES 5
+
 // For led chips like Neopixels, which have a data line, ground, and power, you just
 // need to define DATA_PIN.  For led chipsets that are SPI based (four wires - data, clock,
 // ground, and power), like the LPD8806, define both DATA_PIN and CLOCK_PIN
@@ -44,15 +47,16 @@ volatile uint32_t
 void setup() {
   Serial.begin(9600);
   Serial.println("starting nerf_test");
+
   // set up the ADC sampling speed
   ADCSRA &= ~PS_128;  // remove bits set by Arduino library
   ADCSRA |= PS_16;    // set the prescaler to 16 (1MHz)
 
-  Serial.begin(9600);
-  Serial.println("starting nerf_test");
+  // initialize the LED string
   FastLED.addLeds<WS2812,DATA_PIN,RGB>(leds,NUM_LEDS);
   FastLED.setBrightness(84);
 
+  // start the SD card
   if (!sd.begin(4, SPI_HALF_SPEED)) {
     sd.initErrorHalt();
   } else {
@@ -60,8 +64,7 @@ void setup() {
     sd.ls(LS_R);
   }
 
-  FastLED.show();
-  delay(100);
+  // show the colour wipe, so we know the display's working
   colour_wipe();
 
   // draw the invader logo
@@ -72,6 +75,10 @@ void setup() {
   pinMode(A0, INPUT);
   Timer1.initialize(10000); // run at 100Hz
   Timer1.attachInterrupt(checkImpact);
+
+  // and start watching INT1 for too
+  pinMode(3, INPUT);
+  attachInterrupt(INT1, piezoInt, FALLING);
 }
 
 void fadeall() { for(int i = 0; i < NUM_LEDS; i++) { leds[i].nscale8(250); } }
@@ -79,7 +86,7 @@ void fadeall() { for(int i = 0; i < NUM_LEDS; i++) { leds[i].nscale8(250); } }
 void loop() {
   if (changeImage == true) {
     char filename_buffer[13];
-    sprintf(filename_buffer, "%04d.bmp", currentImage);
+    sprintf(filename_buffer, "%04d.bmp", currentImage+1);
     if (sd.exists(filename_buffer)) {
       Serial.print("Displaying ");
       Serial.println(filename_buffer);
@@ -90,6 +97,7 @@ void loop() {
       Serial.println(" doesn't exist");
     }
     currentImage++;
+    currentImage = currentImage % (NUM_IMAGES);
   }
 }
 
@@ -128,6 +136,14 @@ void checkImpact() {
   if (analogRead(A0) >= analogThreshold && millis() - lastImpact >= impactRepeat) {
     changeImage = true;
     lastImpact = millis();
+  }
+}
+
+void piezoInt() {
+  if (millis() - lastImpact >= impactRepeat) {
+    changeImage = true;
+    lastImpact = millis();
+    Serial.println(F("interrupt"));
   }
 }
 
