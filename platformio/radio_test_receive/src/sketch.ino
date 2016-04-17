@@ -20,7 +20,7 @@ RFM69 radio;
 Payload theData;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("starting radio_test_receive");
 
   // start the SD card

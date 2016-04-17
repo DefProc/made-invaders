@@ -1,7 +1,7 @@
 typedef struct {
   uint8_t message_id = 0x00;
   uint32_t impact_num = 0UL;
-  int16_t timestamp = 0x0000;
+  int32_t timestamp = 0x0000;
   uint8_t rfid_num[8];
   uint32_t game_uid;
   uint32_t score = 0UL;

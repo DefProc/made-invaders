@@ -68,6 +68,7 @@ uint16_t
   imageWidth = 0,
   imageHeight = 0;
 uint32_t
+  gameStartTime = 0UL,
   frameDelay = FRAME_DELAY, // the time to hold each animation frame
   lastImageUpdate = 0UL, // when did we last change the displayed image
   impactRepeat = 100UL; // debounce timeout for the sensor
@@ -119,19 +120,12 @@ void setup() {
   // show the colour wipe, so we know the display's working
   colour_wipe();
 
-  // show the scrolling made invader logo
-  //showImage("title.bmp", frameDelay);
-  //delay(50);
-
-  // show an animation from vertically stacked frames
-  //showImage("anivader.bmp", 250, 0, 0, 10);
-
   // draw the invader logo
   fill_solid(leds, NUM_LEDS, CRGB::Black);
   FastLED.show();
   delay(100);
   showImage("invader.bmp");
-  delay(2000);
+  delay(1000);
 
   if (play_state == TEST) {
     startScoring();
@@ -148,6 +142,8 @@ void startScoring() {
   // and start watching INT1 for too
   pinMode(3, INPUT);
   attachInterrupt(INT1, piezoInt, FALLING);
+
+  gameStartTime = millis() - 5000UL;
 }
 
 void stopScoring() {
@@ -165,18 +161,20 @@ void loop() {
       currentImage = currentImage % (NUM_IMAGES);
       sprintf(filename_buffer, "%04d.bmp", currentImage+1);
       if (sd.exists(filename_buffer)) {
-        //getImageDimensions(filename_buffer);
+        // report the hit via the RFM69
         myPacket.message_id = HIT;
         myPacket.impact_num++;
-        myPacket.timestamp = millis();
-        if (radio.sendWithRetry(MAIN_CTRL, (const void*)(&myPacket), sizeof(myPacket)), 5) {
+        myPacket.timestamp = millis() - gameStartTime;
+        if (radio.sendWithRetry(MAIN_CTRL, (const void*)(&myPacket), sizeof(myPacket), 5)) {
           Serial.println(F("sent impact message"));
         } else {
           Serial.println(F("no radio message sent"));
         }
+
+        // Then change the image
         Serial.print("Displaying ");
         Serial.println(filename_buffer);
-        //bmpDraw(filename_buffer, 0, 0);
+        // show the first frame (if it's an animation)
         showImage(filename_buffer, 0, 0, 1);
         changeImage = false;
       } else {
