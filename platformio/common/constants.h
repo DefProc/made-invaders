@@ -11,7 +11,8 @@ typedef struct {
 #define TAKE_PHOTO 0x01
 #define GAME_END   0x02
 #define CANCEL_GAME 0x03
-#define HIT        0x04
+#define GET_READY  0x04
+#define HIT        0x05
 
 // RFM69 constants
 #define NETWORKID     101  // The same on all nodes that talk to each other
