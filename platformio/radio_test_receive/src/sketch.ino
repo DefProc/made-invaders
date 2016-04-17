@@ -1,15 +1,12 @@
 #include <SdFat.h>
 #include <RFM69.h>
 #include <SPI.h>
+#include "constants.h"
+#include "secrets.h"
 SdFat sd;
 SdFile myFile;
 
-#define NETWORKID     100  // The same on all nodes that talk to each other
 #define NODEID        200    // The Gateway runs on node 200
-#define FREQUENCY     RF69_915MHZ
-#define IS_RFM69HW
-#define ENCRYPTKEY    "changemechangme" //exactly the same 16 characters/bytes on all nodes!
-
 RFM69 radio;
 
 #ifdef __AVR_ATmega1284P__
@@ -20,11 +17,6 @@ RFM69 radio;
   #define FLASH_SS      8 // and FLASH SS on D8
 #endif
 
-typedef struct {
-  uint8_t message_id;
-  uint32_t impact_num;
-  uint32_t timestamp;
-} Payload;
 Payload theData;
 
 void setup() {

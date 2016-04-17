@@ -3,24 +3,16 @@
 #include <TimerOne.h>
 #include <RFM69.h>
 #include <SPI.h>
+#include "constants.h"
+#include "secrets.h"
 SdFat sd;
 SdFile myFile;
 
-#define NETWORKID     100  // The same on all nodes that talk to each other
-#define NODEID        1    // The unique identifier of this node
-#define GATEWAYID     200    // The recipient of packets
-#define FREQUENCY     RF69_915MHZ
-#define IS_RFM69HW
-#define ENCRYPTKEY    "changemechangme" //exactly the same 16 characters/bytes on all nodes!
-
+// The unique identifier of this node
+// targets are numbered 1-16,
+#define NODEID        1
 RFM69 radio;
 
-#define HIT 4;
-typedef struct {
-  uint8_t message_id;
-  uint32_t impact_num;
-  uint32_t timestamp;
-} Payload;
 Payload myPacket;
 
 #define BUFFPIXEL 1
@@ -119,7 +111,8 @@ void loop() {
       myPacket.impact_num++;
       myPacket.timestamp = millis();
       // send just to the gateway, with an ACK check and default 2 trys
-      //if (radio.sendWithRetry(GATEWAYID, (const void*)(&myPacket), sizeof(myPacket))) {
+      if (radio.sendWithRetry(MAIN_CTRL, (const void*)(&myPacket), sizeof(myPacket)), 5) {
+      //if (radio.sendWithRetry(201, (const void*)(&myPacket), sizeof(myPacket))) {
       // send broadcast, with no ACK check
       //if (radio.send(0xFF, (const void*)(&myPacket), sizeof(myPacket)), false) {
         Serial.println(F("sent impact message"));
@@ -171,10 +164,10 @@ void colour_wipe() {
 }
 
 void checkImpact() {
-  if (analogRead(A0) >= analogThreshold && millis() - lastImpact >= impactRepeat) {
-    changeImage = true;
-    lastImpact = millis();
-  }
+  //if (analogRead(A0) >= analogThreshold && millis() - lastImpact >= impactRepeat) {
+    //changeImage = true;
+    //lastImpact = millis();
+  //}
 }
 
 void piezoInt() {
