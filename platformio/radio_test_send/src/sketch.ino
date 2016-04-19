@@ -1,8 +1,19 @@
 #include "FastLED.h"
 #include <SdFat.h>
 #include <TimerOne.h>
+#include <RFM69.h>
+#include <SPI.h>
+#include "constants.h"
+#include "secrets.h"
 SdFat sd;
 SdFile myFile;
+
+// The unique identifier of this node
+// targets are numbered 1-16,
+#define NODEID        1
+RFM69 radio;
+
+Payload myPacket;
 
 #define BUFFPIXEL 1
 
@@ -46,7 +57,7 @@ volatile uint32_t
 
 void setup() {
   Serial.begin(9600);
-  Serial.println("starting nerf_test");
+  Serial.println("starting radio_test_send");
 
   // set up the ADC sampling speed
   ADCSRA &= ~PS_128;  // remove bits set by Arduino library
@@ -63,6 +74,14 @@ void setup() {
     Serial.println(F("SD began"));
     sd.ls(LS_R);
   }
+
+  // initialize the radio
+  radio.initialize(FREQUENCY,NODEID,NETWORKID);
+#ifdef IS_RFM69HW
+  radio.setHighPower(); //uncomment only for RFM69HW!
+#endif
+  radio.encrypt(ENCRYPTKEY);
+
 
   // show the colour wipe, so we know the display's working
   colour_wipe();
@@ -88,6 +107,18 @@ void loop() {
     char filename_buffer[13];
     sprintf(filename_buffer, "%04d.bmp", currentImage+1);
     if (sd.exists(filename_buffer)) {
+      myPacket.message_id = HIT;
+      myPacket.impact_num++;
+      myPacket.timestamp = millis();
+      // send just to the gateway, with an ACK check and default 2 trys
+      if (radio.sendWithRetry(MAIN_CTRL, (const void*)(&myPacket), sizeof(myPacket)), 5) {
+      //if (radio.sendWithRetry(201, (const void*)(&myPacket), sizeof(myPacket))) {
+      // send broadcast, with no ACK check
+      //if (radio.send(0xFF, (const void*)(&myPacket), sizeof(myPacket)), false) {
+        Serial.println(F("sent impact message"));
+      } else {
+        Serial.println(F("no radio message sent"));
+      }
       Serial.print("Displaying ");
       Serial.println(filename_buffer);
       bmpDraw(filename_buffer, 0, 0);
@@ -133,10 +164,10 @@ void colour_wipe() {
 }
 
 void checkImpact() {
-  if (analogRead(A0) >= analogThreshold && millis() - lastImpact >= impactRepeat) {
-    changeImage = true;
-    lastImpact = millis();
-  }
+  //if (analogRead(A0) >= analogThreshold && millis() - lastImpact >= impactRepeat) {
+    //changeImage = true;
+    //lastImpact = millis();
+  //}
 }
 
 void piezoInt() {
