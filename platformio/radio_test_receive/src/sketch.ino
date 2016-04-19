@@ -1,6 +1,9 @@
 #include <SdFat.h>
 #include <RFM69.h>
 #include <SPI.h>
+#include <SPIFlash.h>
+#include <avr/wdt.h>
+#include <WirelessHEX69.h>
 #include "constants.h"
 #include "secrets.h"
 SdFat sd;
@@ -16,6 +19,8 @@ RFM69 radio;
   #define LED           9 // Moteinos have LEDs on D9
   #define FLASH_SS      8 // and FLASH SS on D8
 #endif
+
+SPIFlash flash(FLASH_SS, 0xEF30); //EF30 for windbond 4mbit flash
 
 Payload theData;
 
@@ -46,10 +51,12 @@ uint16_t ackCount = 0;
 void loop() {
   if (radio.receiveDone())
   {
-    Serial.print("Sender:[");Serial.print(radio.SENDERID, DEC);Serial.print("] ");
-    //for (byte i = 0; i < radio.DATALEN; i++)
-      //Serial.print((char)radio.DATA[i]);
+    // allow remote code updates via RFM69
+    CheckForWirelessHEX(radio, flash, true);
+
+    // read out any incoming packets
     if (radio.DATALEN = sizeof(Payload)) {
+      Serial.print("Sender:[");Serial.print(radio.SENDERID, DEC);Serial.print("] ");
       theData = *(Payload*)radio.DATA;
       Serial.print(F("message: "));
       Serial.print(theData.message_id);
@@ -57,8 +64,14 @@ void loop() {
       Serial.print(theData.impact_num);
       Serial.print(F(" timestamp: "));
       Serial.print(theData.timestamp);
+      Serial.print("   [RX_RSSI:");Serial.print(radio.RSSI);Serial.print("]");
+    } else {
+      Serial.println(F("Unknown data: "));
+      for (byte i = 0; i < radio.DATALEN; i++) {
+        Serial.print((char)radio.DATA[i]);
+      }
+      Serial.println();
     }
-    Serial.print("   [RX_RSSI:");Serial.print(radio.RSSI);Serial.print("]");
 
     if (radio.ACKRequested())
     {
