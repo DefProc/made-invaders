@@ -136,8 +136,8 @@ void startScoring() {
   // Start the fast interrupt for the analog read
   pinMode(A0, INPUT);
   // TODO: include the analog input for more reliable scoring
-  //Timer1.initialize(10000); // run at 100Hz
-  //Timer1.attachInterrupt(checkImpact);
+  Timer1.initialize(10000); // run at 100Hz
+  Timer1.attachInterrupt(checkImpact);
 
   // and start watching INT1 for too
   pinMode(3, INPUT);
@@ -161,7 +161,13 @@ void loop() {
       currentImage = currentImage % (NUM_IMAGES);
       sprintf(filename_buffer, "%04d.bmp", currentImage+1);
       if (sd.exists(filename_buffer)) {
-        // report the hit via the RFM69
+        // change the image (ASAP)
+        Serial.print("Displaying ");
+        Serial.println(filename_buffer);
+        // show the first frame (if it's an animation)
+        showImage(filename_buffer, 0, 0, 1);
+        changeImage = false;
+        // Then finally report the hit via the RFM69
         myPacket.message_id = HIT;
         myPacket.impact_num++;
         myPacket.timestamp = millis() - gameStartTime;
@@ -171,12 +177,6 @@ void loop() {
           Serial.println(F("no radio message sent"));
         }
 
-        // Then change the image
-        Serial.print("Displaying ");
-        Serial.println(filename_buffer);
-        // show the first frame (if it's an animation)
-        showImage(filename_buffer, 0, 0, 1);
-        changeImage = false;
       } else {
         Serial.print(filename_buffer);
         Serial.println(" doesn't exist");
