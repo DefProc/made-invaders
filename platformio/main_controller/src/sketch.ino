@@ -54,7 +54,7 @@ long scoremap[] = { 10, 20, 50, 100, 1234, 5120, -100, 999, 1024, 512, 256, 128,
 unsigned long hit_record[16];
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(BAUD);
   Serial.println("starting made-invaders main_controller…");
 
   // initialize the radio

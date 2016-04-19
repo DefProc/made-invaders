@@ -73,7 +73,7 @@ Payload theData; // incoming message buffer
 int showImage(char* filename, uint32_t frame_delay = frameDelay, uint8_t first_frame = currentFrame, uint16_t num_frames = 0, uint16_t repeat_number = 1);
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(BAUD);
   Serial.println("starting radio_test_send");
 
   // set up the ADC sampling speed
