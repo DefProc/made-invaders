@@ -1,18 +1,13 @@
-typedef struct {
-  uint8_t message_id = 0x00;
-  uint32_t impact_num = 0UL;
-  int32_t timestamp = 0x0000;
-  uint8_t rfid_num[8];
-  uint32_t game_uid;
-  uint32_t score = 0UL;
-} Payload;
-
-#define GAME_START 0x00
-#define TAKE_PHOTO 0x01
-#define GAME_END   0x02
-#define CANCEL_GAME 0x03
-#define GET_READY  0x04
-#define HIT        0x05
+// some basic constants for everybody
+#define BAUD 115200 // serial baud rate is then contsant accross all devices
+#define RFID_DIGITS 16 // max number of chars to hold an scanned ID
+#define NUM_TARGETS 16 // how many targets do we have
+#define RUN_TIMER 30000 // play time in ms
+#define GRACE_TIMER 250 // this is a bit of a fude so it *looks* like the game ends at zero
+#define EARLY_PLAY 1000
+#define EXTRA_TIMER 10000 // how much extra time for a zero score
+#define IDLE_TIMER 60000 // wait a minute before going into attract mode
+#define COUNT_DOWN 5000
 
 // RFM69 constants
 #define NETWORKID     101  // The same on all nodes that talk to each other
@@ -20,5 +15,45 @@ typedef struct {
 #define REG_STN       201  // Registration station interpretter (to RPi)
 #define TIMER         202  // Countdown Timer
 #define SCOREBD       203  // The Score Board
-#define FREQUENCY     RF69_915MHZ
+#define FREQUENCY     RF69_868MHZ
 #define IS_RFM69HW
+
+// set the possible messages (in message_id)
+enum message_t : uint8_t {
+  GAME_START,
+  TAKE_PHOTO,
+  GAME_END,
+  NOTHING_DOING,
+  CANCEL_GAME,
+  GET_READY,
+  HIT,
+  DISPLAY_NUM,
+  COUNT_FROM
+};
+
+typedef struct {
+  message_t message_id = GAME_START;
+  uint32_t impact_num = 0UL;
+  long timestamp = 0L;
+  char rfid_num[RFID_DIGITS+1];
+  uint32_t game_uid;
+  long score = 0L;
+} Payload;
+
+enum game_states_t {
+  IDLE,
+  RFID_SCANNED,
+  COUNTDOWN,
+  RUNNING,
+  EXTRA_TIME,
+  END_GAME
+};
+
+// to allow builtin LED use on Moteino/Moteino Mega
+#ifdef __AVR_ATmega1284P__
+  #define LED           15 // Moteino MEGAs have LEDs on D15
+  #define FLASH_SS      23 // and FLASH SS on D23
+#else
+  #define LED           9 // Moteinos have LEDs on D9
+  #define FLASH_SS      8 // and FLASH SS on D8
+#endif
