@@ -66,7 +66,7 @@ void setup() {
   FastLED.addLeds<WS2812,DATA_PIN,RGB>(leds,NUM_LEDS);
   FastLED.setBrightness(84);
 
-  if (!sd.begin(10, SPI_HALF_SPEED)) {
+  if (!sd.begin(4, SPI_HALF_SPEED)) {
     sd.initErrorHalt();
   } else {
     Serial.println(F("SD began"));
