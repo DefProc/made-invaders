@@ -33,16 +33,6 @@ CRGB leds[NUM_LEDS];
 const unsigned char PS_16 = (1 << ADPS2);
 const unsigned char PS_128 = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
 
-// the machine states
-enum play_state_t {
-  IDLE,
-  READY,
-  SUPER_SECRET,
-  PLAY,
-  GAME_OVER,
-  TEST
-};
-
 // possible image states
 enum image_state_t {
   STATIC,
@@ -71,11 +61,14 @@ uint32_t
   gameStartTime = 0UL,
   frameDelay = FRAME_DELAY, // the time to hold each animation frame
   lastImageUpdate = 0UL, // when did we last change the displayed image
-  impactRepeat = 100UL; // debounce timeout for the sensor
+  impactRepeat = 100UL, // debounce timeout for the sensor
+  idleAnimationSpacing = random(5000, 30000);
 volatile uint32_t
   lastImpact = 0UL; // when did we last see a hit
-play_state_t play_state = TEST;
+// TODO: change the inital play state to IDLE
+game_states_t play_state = RUNNING;
 image_state_t image_state = STATIC;
+Payload theData; // incoming message buffer
 
 int showImage(char* filename, uint32_t frame_delay = frameDelay, uint8_t first_frame = currentFrame, uint16_t num_frames = 0, uint16_t repeat_number = 1);
 
@@ -127,9 +120,8 @@ void setup() {
   showImage("invader.bmp");
   delay(1000);
 
-  if (play_state == TEST) {
-    startScoring();
-  }
+  // if we start RUNNING, start listening for hits
+  if (play_state == RUNNING) { startScoring(); }
 }
 
 void startScoring() {
@@ -154,7 +146,7 @@ void stopScoring() {
 void fadeall() { for(int i = 0; i < NUM_LEDS; i++) { leds[i].nscale8(250); } }
 
 void loop() {
-  if (play_state == TEST) {
+  if (play_state == RUNNING) {
     if (changeImage == true) {
       char filename_buffer[13];
       currentImage++;
@@ -188,7 +180,20 @@ void loop() {
       // we've already checked that this exists
       showImage(filename_buffer, 0, currentFrame, 1);
     }
+  } else if (play_state == END_GAME) {
+    fill_solid(leds, NUM_LEDS, CRGB::Black);
+    FastLED.show();
+  } else if (play_state == IDLE) {
+    // just show a scrolling
+    if (millis() - lastImageUpdate >= idleAnimationSpacing) {
+      showImage("title.bmp", 50);
+      lastImageUpdate = millis();
+      idleAnimationSpacing = random(2500, 30000);
+    }
   }
+
+  // let's check any incoming messages
+  checkIncoming();
 }
 
 void colour_wipe() {
@@ -571,4 +576,33 @@ int showImage(char* filename, uint32_t frame_delay, uint8_t first_frame, uint16_
   myFile.close();
   lastImageUpdate = millis();
   return frameNum;
+}
+
+void checkIncoming() {
+  // check any incoming radio messages
+  // *** We need to call this fast enough so as humans don't notice ***
+  if (radio.receiveDone()) {
+    // check if we're getting hit data
+    if (radio.DATALEN = sizeof(Payload)) {
+      theData = *(Payload*)radio.DATA;
+      switch (theData.message_id) {
+        case GAME_START:
+          play_state = RUNNING;
+          startScoring();
+          break;
+        case GAME_END:
+          play_state = END_GAME;
+          stopScoring();
+          break;
+        case NOTHING_DOING:
+          play_state = IDLE;
+          stopScoring();
+          break;
+      }
+    }
+    if (radio.ACKRequested()) {
+      uint8_t theNodeID = radio.SENDERID;
+      radio.sendACK();
+    }
+  }
 }

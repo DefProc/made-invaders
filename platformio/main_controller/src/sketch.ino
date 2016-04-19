@@ -133,6 +133,7 @@ void loop() {
     radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
 
     start_time = millis() + COUNT_DOWN;
+    broadcastMessage(GAME_START);
 
     // wait for it…
     while (millis() - start_time <= EARLY_PLAY);
