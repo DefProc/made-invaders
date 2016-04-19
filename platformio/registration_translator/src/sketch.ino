@@ -47,7 +47,7 @@ void loop() {
           Serial.println();
           break;
         case TAKE_PHOTO:
-          Serial.print("1,")game_uid;
+          Serial.print("1,");
           Serial.print(theData.rfid_num);
           Serial.print(",");
           Serial.print(theData.game_uid);
@@ -74,7 +74,7 @@ void loop() {
           Serial.print(",");
           Serial.print(theData.score);
           Serial.print(",");
-          Serial.print()
+          Serial.println();
       }
     }
     if (radio.ACKRequested()) {
