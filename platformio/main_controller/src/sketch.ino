@@ -55,6 +55,7 @@ long scoremap[] = { 10, 20, 50, 100, 1234, 5120, -100, 999, 1024, 512, 256, 128,
 unsigned long hit_record[16];
 
 void setup() {
+  Wire.begin();
   Serial.begin(BAUD);
   Serial.println("starting made-invaders main_controller…");
 
@@ -85,13 +86,13 @@ void loop() {
   if (game_state == IDLE) {
     Serial.println(F("IDLE state"));
     start_time = millis();
-    // we're waiting for an RFID scan
-    // TODO: reactivate this once we get a level converter installed!
-    rfid.seekTag();
     bool nothing_doing = false; // have we sent a "nothing doing" message
     // hold for rfid read
     Serial.println(F("waiting for rfid tag"));
-    while (!rfid.available() && digitalRead(CANCEL_BUTTON) == LOW) {
+    // we're waiting for an RFID scan
+    // TODO: reactivate this once we get a level converter installed!
+    rfid.seekTag();
+    while (!rfid.available()) { //&& digitalRead(CANCEL_BUTTON) == LOW) {
       // TODO: remove the cancel button check that bypasses the rfid scan
       if (nothing_doing == false) {
         if (millis() - start_time >= IDLE_TIMER) {
@@ -110,11 +111,16 @@ void loop() {
         }
       }
     }
-    strcpy(player_rfid, rfid.getTagString());
+    strncpy(player_rfid, rfid.getTagString(), sizeof(player_rfid));
+    // then change this to lower case because Brett insisted
+    for (int i=0; i<sizeof(player_rfid); i++) {
+      player_rfid[i] = tolower(player_rfid[i]);
+    }
+    // and print to serial so we can see too
     Serial.print(F("rfid: "));
     Serial.println(player_rfid);
     // copy all the game variables into the right places for sending
-    strcpy(player_rfid, myPacket.rfid_num);
+    strncpy(myPacket.rfid_num, player_rfid, sizeof(myPacket.rfid_num));
     myPacket.game_uid = game_uid;
     myPacket.impact_num = 0;
     myPacket.score = 0;
