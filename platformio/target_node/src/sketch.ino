@@ -4,6 +4,7 @@
 #include <RFM69.h>
 #include <SPI.h>
 #include <Entropy.h>
+#include <EEPROM.h>
 #include "constants.h"
 #include "secrets.h"
 SdFat sd;
@@ -11,7 +12,7 @@ SdFile myFile;
 
 // The unique identifier of this node
 // targets are numbered 1-16,
-#define NODEID 1
+uint8_t node_id;
 RFM69 radio;
 
 Payload myPacket;
@@ -107,8 +108,18 @@ void setup() {
     //sd.ls(LS_R);
   }
 
+  // get the node id from EEPROM
+  EEPROM.get(NODE_LOC, node_id);
+  // check it's sensible, or reset to default
+  if (node_id < NODE_MIN || node_id > NODE_MAX) {
+    node_id = NODE_MIN;
+    EEPROM.put(NODE_LOC, node_id);
+  }
+  Serial.print(F("I am target: "));
+  Serial.println(node_id);
+
   // initialize the radio
-  radio.initialize(FREQUENCY,NODEID,NETWORKID);
+  radio.initialize(FREQUENCY,node_id,NETWORKID);
   #ifdef IS_RFM69HW
   radio.setHighPower(); //uncomment only for RFM69HW!
   #endif
@@ -215,6 +226,21 @@ void loop() {
     fill_solid(leds, NUM_LEDS, CRGB::Black);
     FastLED.show();
   } else if (play_state == IDLE) {
+    // allow changing node ID by serial
+    // if there's any serial available, read it:
+    while (Serial.available() > 0) {
+      char character = Serial.read();
+
+      if (character == 'n' || character == 'N') {
+        // set node id
+        uint8_t new_node_id = Serial.parseInt();
+        EEPROM.update(NODE_LOC, new_node_id);
+        Serial.print(F("Node ID set to: "));
+        Serial.println(new_node_id);
+        Serial.println(F("reset to use"));
+      }
+    }
+
     // just show a scrolling
     if (millis() - lastImageUpdate >= idleAnimationSpacing) {
       showImage("title.bmp", 30);
