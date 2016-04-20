@@ -31,9 +31,9 @@ Adafruit_VS1053_FilePlayer musicPlayer =
   Adafruit_VS1053_FilePlayer(VS1053_RESET, VS1053_CS, VS1053_DCS, DREQ, CARDCS);
 
 // button and led connections
-#define START_BUTTON 2
-#define CANCEL_BUTTON 3
-#define START_LED 13
+#define START_BUTTON  10
+#define CANCEL_BUTTON 11
+#define START_LED     15
 
 // Lets get the global variables some space
 Payload theData; // somewhere to store incoming data
@@ -64,20 +64,30 @@ void setup() {
 #endif
   radio.encrypt(ENCRYPTKEY);
 
+  pinMode(START_LED, OUTPUT);
+  pinMode(START_BUTTON, INPUT);
+  pinMode(CANCEL_BUTTON, INPUT);
 
+  Blink(START_LED, 1000);
+  Serial.println(F("end of setup"));
 }
 
 uint16_t ackCount = 0;
 void loop() {
   // start the state machine
   if (game_state == IDLE) {
+    Serial.println(F("IDLE state"));
     // we're waiting for an RFID scan
-    rfid.seekTag();
+    // TODO: reactivate this once we get a level converter installed!
+    //rfid.seekTag();
     bool nothing_doing = false; // have we sent a "nothing doing" message
     // hold for rfid read
-    while (!rfid.available()) {
+    Serial.println(F("waiting for rfid tag"));
+    while (!rfid.available() && digitalRead(CANCEL_BUTTON) == LOW) {
+      // TODO: remove the cancel button check that bypasses the rfid scan
       if (nothing_doing == false) {
         if (millis() - start_time >= IDLE_TIMER) {
+          Serial.println(F("nothing doing"));
           // broadcast NOTHING_DOING to go to idle mode
           myPacket.game_uid = 0;
           myPacket.impact_num = 0;
@@ -91,7 +101,7 @@ void loop() {
           nothing_doing = true;
         }
       }
-    };
+    }
     strcpy(player_rfid, rfid.getTagString());
     Serial.print(F("rfid: "));
     Serial.println(player_rfid);
@@ -107,18 +117,23 @@ void loop() {
     //radio.sendWithRetry(REG_STN, (const void*)&myPacket, sizeof(myPacket), 5);
     game_state = RFID_SCANNED;
   } else if (game_state == RFID_SCANNED) {
+    Serial.println(F("RFID_SCANNED"));
     //pulse the led to show we're waiting for input
-    while(digitalRead(START_BUTTON) == LOW && digitalRead(CANCEL_BUTTON) == LOW) {
+    // TODO: reactivate the cancel button once we're not using it to get
+    //       past the rfid check
+    while(digitalRead(START_BUTTON) == LOW ) { //}&& digitalRead(CANCEL_BUTTON) == LOW) {
       float val = (exp(sin(millis()/1000.0*PI)) - 0.36787944)*108.0;
       analogWrite(START_LED, val);
     }
+    delay(100);
     digitalWrite(START_LED, LOW);
-    if (digitalRead(START_BUTTON) == HIGH) {
+    if (digitalRead(CANCEL_BUTTON) != HIGH) {
       game_state = COUNTDOWN;
     } else {
       game_state = IDLE;
     }
   } else if (game_state == COUNTDOWN) {
+    Serial.print(F("COUNTDOWN"));
     // run through the countdown activities
     // this state is pretty time critical
 
@@ -132,23 +147,37 @@ void loop() {
     myPacket.timestamp = 5000;
     radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
 
-    start_time = millis() + COUNT_DOWN;
+    start_time = millis() + (unsigned long)COUNT_DOWN;
     broadcastMessage(GAME_START);
 
     // wait for it…
-    while (millis() - start_time <= EARLY_PLAY);
+    //while (start_time - millis() >= EARLY_PLAY);
+    Serial.print(F("5… "));
+    delay(1000);
+    Serial.print(F("4… "));
+    delay(1000);
+    Serial.print(F("3… "));
+    delay(1000);
+    Serial.print(F("2… "));
+    delay(1000);
+    Serial.print(F("1… "));
+    delay(1000);
 
     game_state = RUNNING;
+    Serial.print(F("RUNNING"));
   } else if (game_state == RUNNING) {
     // lets' keep this fast, so score updates happen quickly
     checkTargets();
 
-    if (update_scoreboard == true && millis - start_time >= 0) {
+    if (update_scoreboard == true && millis() - start_time >= 0) {
       // there's been a new hit, send that
       scoreDisplay(current_score);
       Serial.println(current_score);
       update_scoreboard = false;
     }
+
+    Serial.print(F("remaining time: "));
+    Serial.println(RUN_TIMER - (millis() - start_time));
 
     if (millis() - start_time >= RUN_TIMER + GRACE_TIMER) {
       uint32_t number_of_hits = 0;
@@ -161,6 +190,7 @@ void loop() {
         myPacket.timestamp = EXTRA_TIMER;
         radio.sendWithRetry(TIMER, (const void*)&myPacket, sizeof(myPacket), 3);
         game_state = EXTRA_TIME;
+        Serial.println(F("EXTRA_TIME"));
       } else {
         game_state = END_GAME;
       }
@@ -184,6 +214,7 @@ void loop() {
       game_state = END_GAME;
     }
   } else if (game_state == END_GAME) {
+    Serial.println(F("END_GAME"));
     // stop everything running
     myPacket.score = current_score;
     uint32_t impact_num;
