@@ -3,6 +3,7 @@
 #include <TimerOne.h>
 #include <RFM69.h>
 #include <SPI.h>
+#include <Entropy.h>
 #include "constants.h"
 #include "secrets.h"
 SdFat sd;
@@ -73,6 +74,9 @@ Payload theData; // incoming message buffer
 int showImage(char* filename, uint32_t frame_delay = frameDelay, uint8_t first_frame = currentFrame, uint16_t num_frames = 0, uint16_t repeat_number = 1);
 
 void setup() {
+  Entropy.initialize();
+  randomSeed(Entropy.random());
+
   Serial.begin(BAUD);
   Serial.println("starting radio_test_send");
 
@@ -152,7 +156,7 @@ void loop() {
     // set the first image
     if (is_ready_to_play == false) {
       // pick a random image
-      currentImage = random8(0,NUM_IMAGES);
+      currentImage = random(0,NUM_IMAGES);
       char filename_buffer[13];
       sprintf(filename_buffer, "%04d.bmp", currentImage+1);
       if (sd.exists(filename_buffer)) {
@@ -176,7 +180,7 @@ void loop() {
     if (changeImage == true) {
       char filename_buffer[13];
       //currentImage++;
-      currentImage = random8(0,NUM_IMAGES);
+      currentImage = random(0,NUM_IMAGES);
       currentImage = currentImage % (NUM_IMAGES);
       sprintf(filename_buffer, "%04d.bmp", currentImage+1);
       if (sd.exists(filename_buffer)) {
@@ -215,7 +219,7 @@ void loop() {
     if (millis() - lastImageUpdate >= idleAnimationSpacing) {
       showImage("title.bmp", 30);
       lastImageUpdate = millis();
-      idleAnimationSpacing = random16(2500, 30000);
+      idleAnimationSpacing = random(2500, 30000);
     } else {
       fill_solid(leds, NUM_LEDS, CRGB::Black);
       FastLED.show();
