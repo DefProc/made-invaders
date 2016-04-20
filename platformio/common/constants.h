@@ -2,12 +2,14 @@
 #define BAUD 115200 // serial baud rate is then contsant accross all devices
 #define RFID_DIGITS 16 // max number of chars to hold an scanned ID
 #define NUM_TARGETS 16 // how many targets do we have
-#define RUN_TIMER 30000 // play time in ms
-#define GRACE_TIMER 250 // this is a bit of a fude so it *looks* like the game ends at zero
-#define EARLY_PLAY 1000
-#define EXTRA_TIMER 10000 // how much extra time for a zero score
-#define IDLE_TIMER 60000 // wait a minute before going into attract mode
-#define COUNT_DOWN 5000
+
+// some unsigned long values for the various timer lengths
+#define RUN_TIMER 30000UL // play time in ms
+#define GRACE_TIMER 250UL // this is a bit of a fude so it *looks* like the game ends at zero
+#define EARLY_PLAY 1000UL
+#define EXTRA_TIMER 10000UL // how much extra time for a zero score
+#define IDLE_TIMER 60000UL // wait a minute before going into attract mode
+#define COUNT_DOWN 5000UL
 
 // RFM69 constants
 #define NETWORKID     101  // The same on all nodes that talk to each other
@@ -28,7 +30,8 @@ enum message_t : uint8_t {
   GET_READY,
   HIT,
   DISPLAY_NUM,
-  COUNT_FROM
+  MORE_TIME,
+  FALSE_START
 };
 
 typedef struct {
