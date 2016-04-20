@@ -7,6 +7,7 @@
     * Take photograph: 1,<rfid-key>,<game_uid>
     * Game end: 2,<rfid-key>,<game_uid>,<score>
     * Target Hit: 3,<rfid-key>,<game_uid>,<target_id>,<timestamp>,<score>
+    * Get Ready: 4,<rfid-key>,<game_uid>
 */
 
 #include <RFM69.h>
@@ -41,21 +42,21 @@ void loop() {
       switch (theData.message_id) {
         case GAME_START:
           Serial.print("0,");
-          Serial.print(theData.rfid_num);
+          printRfid_num();
           Serial.print(",");
           Serial.print(theData.game_uid);
           Serial.println();
           break;
         case TAKE_PHOTO:
           Serial.print("1,");
-          Serial.print(theData.rfid_num);
+          printRfid_num();
           Serial.print(",");
           Serial.print(theData.game_uid);
           Serial.println();
           break;
         case GAME_END:
           Serial.print("2,");
-          Serial.print(theData.rfid_num);
+          printRfid_num();
           Serial.print(",");
           Serial.print(theData.game_uid);
           Serial.print(",");
@@ -64,7 +65,7 @@ void loop() {
           break;
         case HIT:
           Serial.print("3,");
-          Serial.print(theData.rfid_num);
+          printRfid_num();
           Serial.print(",");
           Serial.print(theData.game_uid);
           Serial.print(",");
@@ -75,11 +76,24 @@ void loop() {
           Serial.print(theData.score);
           Serial.print(",");
           Serial.println();
+        case GET_READY:
+          Serial.print("4,");
+          printRfid_num();
+          Serial.print(",");
+          Serial.print(theData.game_uid);
+          Serial.println();
+          break;
       }
     }
     if (radio.ACKRequested()) {
       uint8_t theNodeID = radio.SENDERID;
       radio.sendACK();
     }
+  }
+}
+
+void printRfid_num() {
+  for (int i=0; i<RFID_DIGITS; i++) {
+    Serial.write(theData.rfid_num[i]);
   }
 }
