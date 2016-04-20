@@ -100,7 +100,7 @@ void loop() {
     myPacket.game_uid = game_uid;
     myPacket.impact_num = 0;
     myPacket.score = 0;
-    myPacket.timestamp = -10000;
+    myPacket.timestamp = 30000;
     // let everybody know what's happening
     broadcastMessage(GET_READY);
     // lets at least try to make sure the registration station gets this
