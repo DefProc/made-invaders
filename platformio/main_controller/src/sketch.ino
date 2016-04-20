@@ -90,10 +90,8 @@ void loop() {
     // hold for rfid read
     Serial.println(F("waiting for rfid tag"));
     // we're waiting for an RFID scan
-    // TODO: reactivate this once we get a level converter installed!
     rfid.seekTag();
-    while (!rfid.available()) { //&& digitalRead(CANCEL_BUTTON) == LOW) {
-      // TODO: remove the cancel button check that bypasses the rfid scan
+    while (!rfid.available()) {
       if (nothing_doing == false) {
         if (millis() - start_time >= IDLE_TIMER) {
           Serial.println(F("nothing doing"));
@@ -133,17 +131,20 @@ void loop() {
   } else if (game_state == RFID_SCANNED) {
     Serial.println(F("RFID_SCANNED"));
     //pulse the led to show we're waiting for input
-    // TODO: reactivate the cancel button once we're not using it to get
-    //       past the rfid check
-    while(digitalRead(START_BUTTON) == LOW ) { //}&& digitalRead(CANCEL_BUTTON) == LOW) {
+    int start_button_state = LOW;
+    int cancel_button_state = LOW;
+    while(start_button_state == LOW && cancel_button_state == LOW) {
       float val = (exp(sin(millis()/1000.0*PI)) - 0.36787944)*108.0;
       analogWrite(START_LED, val);
+      start_button_state = digitalRead(START_BUTTON);
+      cancel_button_state = digitalRead(CANCEL_BUTTON);
     }
     delay(100);
     digitalWrite(START_LED, LOW);
-    if (digitalRead(CANCEL_BUTTON) != HIGH) {
+    if (start_button_state == HIGH) {
       game_state = COUNTDOWN;
     } else {
+      broadcastMessage(CANCEL_GAME);
       game_state = IDLE;
     }
   } else if (game_state == COUNTDOWN) {
@@ -162,10 +163,8 @@ void loop() {
     radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
 
     start_time = millis() + (unsigned long)COUNT_DOWN;
-    broadcastMessage(GAME_START);
 
     // wait for it…
-    //while (start_time - millis() >= EARLY_PLAY);
     Serial.print(F("5… "));
     delay(1000);
     Serial.print(F("4… "));
@@ -173,7 +172,9 @@ void loop() {
     Serial.print(F("3… "));
     delay(1000);
     Serial.print(F("2… "));
-    delay(1000);
+    delay(800);
+    broadcastMessage(GAME_START);
+    delay(200);
     Serial.print(F("1… "));
     delay(1000);
 
