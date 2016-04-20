@@ -41,6 +41,7 @@ Payload myPacket; // and one for oddutgoing
 game_states_t game_state = IDLE;
 char player_rfid[RFID_DIGITS+1];
 long
+  remaining_game_time = 0,
   current_score = 0;
 unsigned long
   start_time = 0,
@@ -77,6 +78,7 @@ void loop() {
   // start the state machine
   if (game_state == IDLE) {
     Serial.println(F("IDLE state"));
+    start_time = millis();
     // we're waiting for an RFID scan
     // TODO: reactivate this once we get a level converter installed!
     //rfid.seekTag();
@@ -92,12 +94,12 @@ void loop() {
           myPacket.game_uid = 0;
           myPacket.impact_num = 0;
           myPacket.score = 0;
-          for (int i=0; i<sizeof(myPacket.rfid_num); i++) {
+          for (int i=0; i<RFID_DIGITS; i++) {
             myPacket.rfid_num[i] = '0';
           }
           myPacket.timestamp = 0;
           myPacket.message_id = NOTHING_DOING;
-          radio.send(0xFF, (const void*)&myPacket, sizeof(myPacket), false);
+          broadcastMessage(NOTHING_DOING);
           nothing_doing = true;
         }
       }
@@ -133,14 +135,14 @@ void loop() {
       game_state = IDLE;
     }
   } else if (game_state == COUNTDOWN) {
-    Serial.print(F("COUNTDOWN"));
+    Serial.println(F("COUNTDOWN"));
     // run through the countdown activities
     // this state is pretty time critical
 
     // reset all the game counters
     current_score = 0;
     update_scoreboard = false;
-    take_photo = false;
+    take_photo = true;
 
     // then make the countdown
     myPacket.message_id = COUNT_FROM;
@@ -164,7 +166,7 @@ void loop() {
     delay(1000);
 
     game_state = RUNNING;
-    Serial.print(F("RUNNING"));
+    Serial.println(F("RUNNING"));
   } else if (game_state == RUNNING) {
     // lets' keep this fast, so score updates happen quickly
     checkTargets();
@@ -176,8 +178,17 @@ void loop() {
       update_scoreboard = false;
     }
 
-    Serial.print(F("remaining time: "));
-    Serial.println(RUN_TIMER - (millis() - start_time));
+    if (take_photo == true) {
+      remaining_game_time = (long)(RUN_TIMER - (millis() - start_time));
+      if (remaining_game_time <= RUN_TIMER/2) {
+        Serial.print(F("take a photo with "));
+        Serial.print(remaining_game_time/1000);
+        Serial.println(F(" seconds remaining"));
+        myPacket.message_id = TAKE_PHOTO;
+        radio.sendWithRetry(REG_STN, (const void*)&myPacket, sizeof(myPacket), 2);
+        take_photo = false;
+      }
+    }
 
     if (millis() - start_time >= RUN_TIMER + GRACE_TIMER) {
       uint32_t number_of_hits = 0;
@@ -245,12 +256,16 @@ void scoreDisplay(int32_t a_number) {
   myPacket.message_id = DISPLAY_NUM;
   myPacket.score = a_number;
   radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 3);
+  Serial.print(F("sent score for display: "));
+  Serial.println(myPacket.score);
 }
 
 void broadcastMessage(message_t the_message) {
   myPacket.message_id = the_message;
   myPacket.timestamp = millis() - start_time;
   radio.send(0xFF, (const void*)(&myPacket), sizeof(myPacket));
+  Serial.print(F("broadcast message: "));
+  Serial.println(the_message);
 }
 
 void checkTargets() {
