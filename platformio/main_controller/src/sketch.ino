@@ -65,9 +65,15 @@ void setup() {
 #endif
   radio.encrypt(ENCRYPTKEY);
 
+  // set up the button an led pins
   pinMode(START_LED, OUTPUT);
   pinMode(START_BUTTON, INPUT);
   pinMode(CANCEL_BUTTON, INPUT);
+
+  // lets just prep the rfid array with zeros
+  for (int i=0; i<RFID_DIGITS; i++) {
+    myPacket.rfid_num[i] = '0';
+  }
 
   Blink(START_LED, 1000);
   Serial.println(F("end of setup"));
@@ -81,7 +87,7 @@ void loop() {
     start_time = millis();
     // we're waiting for an RFID scan
     // TODO: reactivate this once we get a level converter installed!
-    //rfid.seekTag();
+    rfid.seekTag();
     bool nothing_doing = false; // have we sent a "nothing doing" message
     // hold for rfid read
     Serial.println(F("waiting for rfid tag"));
