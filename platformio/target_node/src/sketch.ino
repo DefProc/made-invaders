@@ -44,6 +44,7 @@ enum image_state_t {
 volatile boolean
   changeImage = false; // should we change the image to the next one?
 boolean
+  is_ready_to_play = false,
   singleGraphic = false, // single BMP file
   setupActive = false; // set brightness, playback mode, etc.
 int
@@ -65,8 +66,7 @@ uint32_t
   idleAnimationSpacing = random(5000, 30000);
 volatile uint32_t
   lastImpact = 0UL; // when did we last see a hit
-// TODO: change the inital play state to IDLE
-game_states_t play_state = RUNNING;
+game_states_t play_state = IDLE;
 image_state_t image_state = STATIC;
 Payload theData; // incoming message buffer
 
@@ -105,20 +105,22 @@ void setup() {
 
   // initialize the radio
   radio.initialize(FREQUENCY,NODEID,NETWORKID);
-#ifdef IS_RFM69HW
+  #ifdef IS_RFM69HW
   radio.setHighPower(); //uncomment only for RFM69HW!
-#endif
+  #endif
   radio.encrypt(ENCRYPTKEY);
 
   // show the colour wipe, so we know the display's working
   colour_wipe();
 
   // draw the invader logo
-  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  clearStripBuffer();
   FastLED.show();
   delay(100);
   showImage("invader.bmp");
-  delay(1000);
+  delay(2000);
+  clearStripBuffer();
+  FastLED.show();
 
   // if we start RUNNING, start listening for hits
   if (play_state == RUNNING) { startScoring(); }
@@ -146,10 +148,35 @@ void stopScoring() {
 void fadeall() { for(int i = 0; i < NUM_LEDS; i++) { leds[i].nscale8(250); } }
 
 void loop() {
-  if (play_state == RUNNING) {
+  if (play_state == RFID_SCANNED) {
+    // set the first image
+    if (is_ready_to_play == false) {
+      // pick a random image
+      currentImage = random8(0,NUM_IMAGES);
+      char filename_buffer[13];
+      sprintf(filename_buffer, "%04d.bmp", currentImage+1);
+      if (sd.exists(filename_buffer)) {
+        Serial.print(F("displaying "));
+        Serial.println(filename_buffer);
+        // show the first frame if it's an animation
+        showImage(filename_buffer, 0, 0, 1);
+        is_ready_to_play = true;
+      } else {
+        currentImage++;
+        currentImage = currentImage % NUM_IMAGES;
+      }
+    } else if (image_state != STATIC && millis() - lastImageUpdate >= frameDelay) {
+      // we should update the current image if it's an animation at it's time to
+      char filename_buffer[13];
+      sprintf(filename_buffer, "%04d.bmp", currentImage+1);
+      // we've already checked that this exists
+      showImage(filename_buffer, 0, currentFrame, 1);
+    }
+  } else if (play_state == RUNNING) {
     if (changeImage == true) {
       char filename_buffer[13];
-      currentImage++;
+      //currentImage++;
+      currentImage = random8(0,NUM_IMAGES);
       currentImage = currentImage % (NUM_IMAGES);
       sprintf(filename_buffer, "%04d.bmp", currentImage+1);
       if (sd.exists(filename_buffer)) {
@@ -186,9 +213,12 @@ void loop() {
   } else if (play_state == IDLE) {
     // just show a scrolling
     if (millis() - lastImageUpdate >= idleAnimationSpacing) {
-      showImage("title.bmp", 50);
+      showImage("title.bmp", 30);
       lastImageUpdate = millis();
-      idleAnimationSpacing = random(2500, 30000);
+      idleAnimationSpacing = random16(2500, 30000);
+    } else {
+      fill_solid(leds, NUM_LEDS, CRGB::Black);
+      FastLED.show();
     }
   }
 
@@ -587,14 +617,27 @@ void checkIncoming() {
       theData = *(Payload*)radio.DATA;
       switch (theData.message_id) {
         case GAME_START:
+          Serial.println(F("GAME_START"));
           play_state = RUNNING;
           startScoring();
           break;
         case GAME_END:
+          Serial.println(F("GAME_END"));
           play_state = END_GAME;
           stopScoring();
           break;
         case NOTHING_DOING:
+          Serial.println(F("NOTHING_DOING"));
+          play_state = IDLE;
+          stopScoring();
+          break;
+        case GET_READY:
+          Serial.println(F("GET_READY"));
+          play_state = RFID_SCANNED;
+          is_ready_to_play = false;
+          break;
+        case CANCEL_GAME:
+          Serial.println(F("CANCEL_GAME"));
           play_state = IDLE;
           stopScoring();
           break;
