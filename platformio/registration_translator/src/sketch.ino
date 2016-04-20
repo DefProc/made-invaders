@@ -22,7 +22,7 @@ Payload theData;
 
 void setup() {
   // start the serial monitor
-  Serial.begin(BAUD);
+  Serial.begin(9600);
   // initialize the radio
   radio.initialize(FREQUENCY,NODEID,NETWORKID);
 #ifdef IS_RFM69HW
