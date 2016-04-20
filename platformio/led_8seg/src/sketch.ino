@@ -20,10 +20,10 @@
 RFM69 radio;
 Payload theData;
 
-#define NOE 9 //pwm
-#define LE 8 //latch
-#define CLK 10 //clock
-#define SDO 11 //serial data
+#define LE 3 //latch
+#define NOE 4 //pwm
+#define CLK 5 //clock
+#define SDO 6 //serial data
 
 #define TIMER_DEFAULT 300 // 30.0 seconds
 #define TIMER_RESOLUTION 10 // 10 ms = 0.01 sec
@@ -52,7 +52,8 @@ byte segments[] =
 #define BLANK 11
 #define MINUS 12
 
-boolean run_flag = false;
+bool run_flag = false;
+bool ready_flag = false;
 unsigned long counter = 0UL;
 long timer = TIMER_DEFAULT;
 
@@ -61,9 +62,9 @@ void displayTime(long number, int decimalplaces = DECIMAL_PLACES);
 
 void setup() {
   Serial.begin(BAUD);
-  pinMode(LED,OUTPUT);
   pinMode(LE,OUTPUT);
-  analogWrite(NOE,LOW);
+  pinMode(NOE,OUTPUT);
+  digitalWrite(NOE,LOW);
   pinMode(CLK,OUTPUT);
   pinMode(SDO,OUTPUT);
 
@@ -138,7 +139,9 @@ void loop() {
     if (millis() - counter < timer * 100) {
       int time_to_display = timer - ((millis() - counter)/100);
       displayTime(time_to_display);
-      //Serial.println(time_to_display);
+      //if (time_to_display % 10 == 0) {
+        //Serial.println(time_to_display);
+      //}
     } else {
       displayTime(0);
       run_flag = false;
@@ -188,18 +191,63 @@ void checkIncoming() {
       theData = *(Payload*)radio.DATA;
       switch (theData.message_id) {
         case GET_READY:
+          Serial.println(F("GET_READY"));
+          if (NODEID == TIMER) {
+            run_flag = false;
+            timer = RUN_TIMER/100;
+            displayTime(timer);
+          } else {
+            // we aren't a timer, just a display
+            run_flag = false;
+            displayTime(0, 0);
+          }
+          break;
+        case CANCEL_GAME:
+          Serial.println(F("CANCEL"));
           run_flag = false;
-          timer = theData.timestamp/timer/10;
-          displayTime(timer);
+          if (NODEID == TIMER) {
+            displayTime(0);
+          } else {
+            displayTime(0, 0);
+          }
           break;
         case GAME_START:
-          displayTime(timer);
-          run_flag = true;
-          counter = millis();
+          Serial.print(F("GAME_START "));
+          if (radio.TARGETID == NODEID) {
+            // only start the timer if it's addressed to us
+            // so this will ignore a broadcast GAME_START command
+            Serial.println(F("listened"));
+            displayTime(timer);
+            run_flag = true;
+            counter = millis();
+          } else {
+            Serial.println(F("ignored"));
+            Serial.print(F("sent to "));
+            Serial.println(radio.TARGETID);
+          }
+          break;
+        case MORE_TIME:
+          if (NODEID == TIMER) {
+            Serial.println(F("MORE_TIME"));
+            run_flag = true;
+            timer = EXTRA_TIMER/100;
+            displayTime(timer);
+            counter = millis();
+          }
           break;
         case GAME_END:
+          Serial.println(F("GAME_END"));
           run_flag = false;
-          displayTime(0);
+          ready_flag = false;
+          if (NODEID == TIMER) {
+            displayTime(0);
+          }
+          break;
+        case DISPLAY_NUM:
+          Serial.print(F("DISPLAY_NUM: "));
+          Serial.print(theData.score);
+          run_flag = false;
+          displayTime(theData.score, 0);
           break;
       }
     }

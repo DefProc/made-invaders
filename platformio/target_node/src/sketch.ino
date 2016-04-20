@@ -16,7 +16,7 @@ RFM69 radio;
 Payload myPacket;
 
 // How many numbered images on the SD card?
-#define NUM_IMAGES 7
+#define NUM_IMAGES 23
 
 #define BUFFPIXEL 20
 #define NUM_LEDS 90

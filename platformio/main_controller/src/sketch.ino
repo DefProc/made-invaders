@@ -44,6 +44,7 @@ long
   remaining_game_time = 0,
   current_score = 0;
 unsigned long
+  number_of_hits = 0,
   start_time = 0,
   game_uid = 0;
 volatile bool
@@ -52,7 +53,7 @@ volatile bool
 
 // set the target scores:
 long scoremap[] = { 10, 20, 50, 100, 1234, 5120, -100, 999, 1024, 512, 256, 128, 200, 865, 6547, 450 };
-unsigned long hit_record[16];
+unsigned long hit_record[sizeof(scoremap)];
 
 void setup() {
   Wire.begin();
@@ -154,29 +155,46 @@ void loop() {
 
     // reset all the game counters
     current_score = 0;
-    update_scoreboard = false;
+    for (int i=0; i<sizeof(scoremap); i++) {
+       hit_record[i] = 0;
+    }
+    update_scoreboard = true; // make sure we get an inital refresh to zero
     take_photo = true;
 
     // then make the countdown
-    myPacket.message_id = COUNT_FROM;
-    myPacket.timestamp = 5000;
-    radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
-
     start_time = millis() + (unsigned long)COUNT_DOWN;
 
     // wait for it…
     Serial.print(F("5… "));
+    myPacket.message_id = DISPLAY_NUM;
+    myPacket.score = 5;
+    radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
     delay(1000);
     Serial.print(F("4… "));
+    myPacket.message_id = DISPLAY_NUM;
+    myPacket.score = 4;
+    radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
     delay(1000);
     Serial.print(F("3… "));
+    myPacket.message_id = DISPLAY_NUM;
+    myPacket.score = 3;
+    radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
     delay(1000);
     Serial.print(F("2… "));
+    myPacket.message_id = DISPLAY_NUM;
+    myPacket.score = 2;
+    radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
     delay(800);
     broadcastMessage(GAME_START);
     delay(200);
     Serial.print(F("1… "));
+    myPacket.message_id = DISPLAY_NUM;
+    myPacket.score = 1;
+    radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
     delay(1000);
+    // send a directed start message to begin the timer
+    myPacket.message_id = GAME_START;
+    radio.sendWithRetry(TIMER, (const void*)&myPacket, sizeof(myPacket), 5);
 
     game_state = RUNNING;
     Serial.println(F("RUNNING"));
@@ -204,49 +222,54 @@ void loop() {
     }
 
     if (millis() - start_time >= RUN_TIMER + GRACE_TIMER) {
-      uint32_t number_of_hits = 0;
-      for (int i=0; i<sizeof(hit_record); i++) {
+      for (int i=0; i<sizeof(scoremap); i++) {
          number_of_hits += hit_record[i];
       }
       if (current_score == 0 && number_of_hits == 0) {
         // there's been no impacts, allow some extra time
-        myPacket.message_id = COUNT_FROM;
-        myPacket.timestamp = EXTRA_TIMER;
+        myPacket.message_id = MORE_TIME;
         radio.sendWithRetry(TIMER, (const void*)&myPacket, sizeof(myPacket), 3);
         game_state = EXTRA_TIME;
         Serial.println(F("EXTRA_TIME"));
       } else {
+        Serial.print(F("end score: "));
+        Serial.println(current_score);
+        Serial.print(F("number of hits: "));
+        Serial.print(number_of_hits);
         game_state = END_GAME;
       }
     }
   } else if (game_state == EXTRA_TIME) {
     // if there's been no score allow some extra time for a single hit
     checkTargets();
+
     if (update_scoreboard == true) {
       // just the one hit
-      myPacket.score = current_score;
-      uint32_t impact_num;
-      for (int i=0; i<sizeof(hit_record); i++) {
-        impact_num += hit_record[i];
-      }
-      myPacket.impact_num = impact_num;
-      myPacket.timestamp = millis() - start_time;
       scoreDisplay(current_score);
       game_state = END_GAME;
       update_scoreboard = false;
-    } else if (millis() - start_time >= RUN_TIMER + EXTRA_TIMER + GRACE_TIMER) {
-      game_state = END_GAME;
     }
+
+    if (millis() - start_time >= RUN_TIMER + EXTRA_TIMER + GRACE_TIMER) {
+      Serial.print(F("end score: "));
+      Serial.println(current_score);
+      Serial.print(F("number of hits: "));
+      Serial.print(number_of_hits);
+      game_state = END_GAME;
+    } else {
+      Serial.println(millis()-start_time);
+    }
+    delay(250);
   } else if (game_state == END_GAME) {
     Serial.println(F("END_GAME"));
     // stop everything running
     myPacket.score = current_score;
-    uint32_t impact_num;
-    for (int i=0; i<sizeof(hit_record); i++) {
-      impact_num += hit_record[i];
+    for (int i=0; i<sizeof(scoremap); i++) {
+      number_of_hits += hit_record[i];
     }
-    myPacket.impact_num = impact_num;
+    myPacket.impact_num = number_of_hits;
     myPacket.timestamp = millis() - start_time;
+    scoreDisplay(current_score);
     broadcastMessage(GAME_END);
 
     // increment the counters for the next game
@@ -269,7 +292,7 @@ void scoreDisplay(int32_t a_number) {
   myPacket.message_id = DISPLAY_NUM;
   myPacket.score = a_number;
   radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 3);
-  Serial.print(F("sent score for display: "));
+  Serial.print(F("display score: "));
   Serial.println(myPacket.score);
 }
 
