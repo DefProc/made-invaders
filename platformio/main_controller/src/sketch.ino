@@ -108,7 +108,7 @@ uint16_t ackCount = 0;
 void loop() {
   // start the state machine
   if (game_state == IDLE) {
-    
+
     Serial.println(F("IDLE state"));
     start_time = millis();
     bool nothing_doing = false; // have we sent a "nothing doing" message
@@ -222,6 +222,7 @@ void loop() {
     radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
     delay(800);
     broadcastMessage(GAME_START);
+
     delay(200);
     Serial.print(F("1… "));
     musicPlayer.startPlayingFile("MARPIP2.MP3");
@@ -346,7 +347,7 @@ void scoreDisplay(int32_t a_number) {
 void broadcastMessage(message_t the_message) {
   myPacket.message_id = the_message;
   myPacket.timestamp = millis() - start_time;
-  radio.send(0xFF, (const void*)(&myPacket), sizeof(myPacket));
+  radio.send(0xFF, (const void*)(&myPacket), sizeof(myPacket), false);
   Serial.print(F("broadcast message: "));
   Serial.println(the_message);
 }
