@@ -18,7 +18,10 @@ RFM69 radio;
 Payload myPacket;
 
 // How many numbered images on the SD card?
-#define NUM_IMAGES 23
+uint8_t num_images;
+
+#define BUTTON 3 // pin for the test button
+#define BUTTON_TEST_DELAY 2000 // how long to press the button for test mode
 
 #define BUFFPIXEL 20
 #define NUM_LEDS 90
@@ -44,12 +47,16 @@ enum image_state_t {
 
 // System Setup
 volatile boolean
-  changeImage = false; // should we change the image to the next one?
+  changeImage = true; // should we change the image to the next one?
 boolean
   is_ready_to_play = false,
+  show_help = false,
+  test_images = false, // should we check the number of images on the SD (slow)
   singleGraphic = false, // single BMP file
   setupActive = false; // set brightness, playback mode, etc.
 int
+  currentButtonState = HIGH,
+  lastButtonState = HIGH,
   offsetX = 0, // for translating images x pixels
   offsetY = 0; // for translating images y pixels
 uint8_t
@@ -67,8 +74,9 @@ uint32_t
   impactRepeat = 100UL, // debounce timeout for the sensor
   idleAnimationSpacing = random(5000, 30000);
 volatile uint32_t
+  lastButton = 0UL, // when did we last press the button
   lastImpact = 0UL; // when did we last see a hit
-game_states_t play_state = IDLE;
+game_states_t play_state = RUNNING;
 image_state_t image_state = STATIC;
 Payload theData; // incoming message buffer
 
@@ -117,6 +125,16 @@ void setup() {
   }
   Serial.print(F("I am target: "));
   Serial.println(node_id);
+
+  // get the number of images from EEPROM
+  EEPROM.get(IMAGE_LOC, num_images);
+  // check it's sensible, or reset to default
+  if (num_images < IMAGE_DEFAULT || num_images > IMAGE_MAX) {
+    num_images = IMAGE_DEFAULT;
+    EEPROM.put(IMAGE_LOC, num_images);
+  }
+  Serial.print(F("Number of Images: "));
+  Serial.println(num_images);
 
   // initialize the radio
   radio.initialize(FREQUENCY,node_id,NETWORKID);
@@ -167,7 +185,7 @@ void loop() {
     // set the first image
     if (is_ready_to_play == false) {
       // pick a random image
-      currentImage = random(0,NUM_IMAGES);
+      currentImage = random(0,num_images);
       char filename_buffer[13];
       sprintf(filename_buffer, "%04d.bmp", currentImage+1);
       if (sd.exists(filename_buffer)) {
@@ -178,7 +196,7 @@ void loop() {
         is_ready_to_play = true;
       } else {
         currentImage++;
-        currentImage = currentImage % NUM_IMAGES;
+        currentImage = currentImage % num_images;
       }
     } else if (image_state != STATIC && millis() - lastImageUpdate >= frameDelay) {
       // we should update the current image if it's an animation at it's time to
@@ -189,32 +207,33 @@ void loop() {
     }
   } else if (play_state == RUNNING) {
     if (changeImage == true) {
-      char filename_buffer[13];
-      //currentImage++;
-      currentImage = random(0,NUM_IMAGES);
-      currentImage = currentImage % (NUM_IMAGES);
-      sprintf(filename_buffer, "%04d.bmp", currentImage+1);
-      if (sd.exists(filename_buffer)) {
-        // change the image (ASAP)
-        Serial.print("Displaying ");
-        Serial.println(filename_buffer);
-        // show the first frame (if it's an animation)
-        showImage(filename_buffer, 0, 0, 1);
-        changeImage = false;
-        // Then finally report the hit via the RFM69
-        myPacket.message_id = HIT;
-        myPacket.impact_num++;
-        myPacket.timestamp = millis() - gameStartTime;
-        if (radio.sendWithRetry(MAIN_CTRL, (const void*)(&myPacket), sizeof(myPacket), 5)) {
-          Serial.println(F("sent impact message"));
-        } else {
-          Serial.println(F("no radio message sent"));
-        }
-
+      // change the image (ASAP)
+      // TODO: this is where a better destroy animation should go
+      destroy();
+      // Then report the hit via the RFM69
+      myPacket.message_id = HIT;
+      myPacket.impact_num++;
+      myPacket.timestamp = millis() - gameStartTime;
+      if (radio.sendWithRetry(MAIN_CTRL, (const void*)(&myPacket), sizeof(myPacket), 5)) {
+        Serial.println(F("sent impact message"));
       } else {
-        Serial.print(filename_buffer);
-        Serial.println(" doesn't exist");
+        Serial.println(F("no radio message sent"));
       }
+      //Then show the next character
+      // TODO: check the image exists before we call it
+      //       This shouldn't be too bad, because have checked for an SD card
+      //       and the nubmer of images must be a continuous list, but there's
+      //       always the chance someone's done something funny
+      char filename_buffer[13];
+      // TODO: we should at least check that we don't get the same number again
+      currentImage = random(0,num_images);
+      currentImage = currentImage % (num_images);
+      sprintf(filename_buffer, "%04d.bmp", currentImage+1);
+      Serial.print("Displaying ");
+      Serial.println(filename_buffer);
+      // show the first frame (if it's an animation)
+      showImage(filename_buffer, 0, 0, 1);
+      changeImage = false;
     } else if (image_state != STATIC && millis() - lastImageUpdate >= frameDelay) {
       // we should update the current image if it's an animation at it's time to
       char filename_buffer[13];
@@ -226,19 +245,47 @@ void loop() {
     fill_solid(leds, NUM_LEDS, CRGB::Black);
     FastLED.show();
   } else if (play_state == IDLE) {
-    // allow changing node ID by serial
+    bool go_to_test_mode = false;
+
     // if there's any serial available, read it:
     while (Serial.available() > 0) {
       char character = Serial.read();
-
-      if (character == 'n' || character == 'N') {
-        // set node id
-        uint8_t new_node_id = Serial.parseInt();
-        EEPROM.update(NODE_LOC, new_node_id);
-        Serial.print(F("Node ID set to: "));
-        Serial.println(new_node_id);
-        Serial.println(F("reset to use"));
+      if (character == 't' || character == 'T') {
+        test_images = false;
+        show_help = true;
+        go_to_test_mode = true;
       }
+    }
+
+    // check if we should be changing to TEST mode
+    currentButtonState = digitalRead(BUTTON);
+    if (digitalRead(BUTTON) == LOW) {
+      // button is pressed
+      if (currentButtonState != lastButtonState) {
+        // it's just been pressed
+        lastButton = millis();
+        lastButtonState = currentButtonState;
+        Serial.print(F("button pressed, counting"));
+      } else {
+        if (millis() - lastButton >= BUTTON_TEST_DELAY) {
+          // enter test mode
+          Serial.println(F("held long enough"));
+          test_images = true;
+          show_help = false;
+          go_to_test_mode = true;
+        }
+      }
+    } else {
+      // button is released
+      lastButtonState = currentButtonState;
+    }
+
+    if (go_to_test_mode == true) {
+        Serial.println(F("Testing mode (reset to exit)"));
+        Serial.println(F("n<number> to set node_id (1-16)"));
+        Serial.println(F("i to recount the number of images"));
+        show_help = true;
+        play_state = TEST;
     }
 
     // just show a scrolling
@@ -250,7 +297,73 @@ void loop() {
       fill_solid(leds, NUM_LEDS, CRGB::Black);
       FastLED.show();
     }
-  }
+  } else if (play_state == TEST) {
+    while (Serial.available() > 0) {
+      char character = Serial.read();
+
+      if (character == 'h' || character == 'H') {
+        // show the menu
+        show_help = true;
+      }
+
+      if (character == 'n' || character == 'N') {
+        // set node id
+        uint8_t new_node_id = Serial.parseInt();
+        EEPROM.update(NODE_LOC, new_node_id);
+        Serial.print(F("Node ID set to: "));
+        Serial.println(new_node_id);
+        Serial.println(F("reset to use"));
+      }
+
+      if (character == 'i' || character == 'I') {
+        // count the images on the SD card
+        test_images = true;
+      }
+    }
+
+    if (test_images == true) {
+      // check the number of images on the SD card
+      Serial.println(F("checking the number of images on the card"));
+      Serial.println(F("we may be some time"));
+      fill_solid(leds, NUM_LEDS, CRGB::Green);
+      FastLED.show();
+      delay(100);
+      fill_solid(leds, NUM_LEDS, CRGB::Black);
+      FastLED.show();
+      uint8_t num_images = 0;
+      for (int i = 0; i<=IMAGE_MAX; i++) {
+        char filename_buffer[13];
+        sprintf(filename_buffer, "%04d.bmp", i+1);
+        //myFile.close();
+        Serial.print(filename_buffer);
+        if (sd.exists(filename_buffer)) {
+          leds[i] = CRGB::Yellow;
+          FastLED.show();
+          Serial.println(F(" exists"));
+          num_images++;
+        } else {
+          Serial.println(F(" not found"));
+          break;
+        }
+      }
+      Serial.print(num_images);
+      Serial.println(F(" images found"));
+      test_images = false;
+      //write this value to the EEPROM for next time
+      EEPROM.update(IMAGE_LOC, num_images);
+      delay(500);
+      fill_solid(leds, NUM_LEDS, CRGB::Black);
+      FastLED.show();
+    }
+
+    if (show_help == true) {
+      // show the possible options
+      Serial.println(F("Testing mode (reset to exit)"));
+      Serial.println(F("n<number> to set node_id (1-16)"));
+      Serial.println(F("i to recount the number of images"));
+      show_help = false;
+    }
+  } // end of state machine
 
   // let's check any incoming messages
   checkIncoming();
@@ -300,6 +413,39 @@ void piezoInt() {
     lastImpact = millis();
     Serial.println(F("interrupt"));
   }
+}
+
+void destroy() {
+  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  FastLED.show();
+  delay(50);
+  //fill_solid(leds, NUM_LEDS, CRGB::Red);
+  for (uint8_t i=0; i<NUM_LEDS; i++) {
+    if (random(10) < 7) { leds[i] = CRGB::Red; }
+  }
+  FastLED.show();
+  delay(50);
+  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  FastLED.show();
+  delay(50);
+  //fill_solid(leds, NUM_LEDS, CRGB::Orange);
+  for (uint8_t i=0; i<NUM_LEDS; i++) {
+    if (random(10) < 4) { leds[i] = CRGB::White; }
+  }
+  FastLED.show();
+  delay(50);
+  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  FastLED.show();
+  delay(50);
+  //fill_solid(leds, NUM_LEDS, CRGB::Yellow);
+  for (uint8_t i=0; i<NUM_LEDS; i++) {
+    if (random(10) < 1) { leds[i] = CRGB::Yellow; }
+  }
+  FastLED.show();
+  delay(50);
+  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  FastLED.show();
+  delay(100);
 }
 
 // This function opens a Windows Bitmap (BMP) file and

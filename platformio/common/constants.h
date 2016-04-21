@@ -2,9 +2,14 @@
 #define BAUD 115200 // serial baud rate is then contsant accross all devices
 #define RFID_DIGITS 16 // max number of chars to hold an scanned ID
 #define NUM_TARGETS 16 // how many targets do we have
+
+// target node EEPROM locations
 #define NODE_LOC 1
 #define NODE_MIN 1
 #define NODE_MAX 16
+#define IMAGE_LOC 5
+#define IMAGE_DEFAULT 5
+#define IMAGE_MAX 200
 
 // some unsigned long values for the various timer lengths
 #define RUN_TIMER 30000UL // play time in ms
@@ -52,7 +57,8 @@ enum game_states_t {
   COUNTDOWN,
   RUNNING,
   EXTRA_TIME,
-  END_GAME
+  END_GAME,
+  TEST
 };
 
 // to allow builtin LED use on Moteino/Moteino Mega
