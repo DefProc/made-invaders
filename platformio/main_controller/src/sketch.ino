@@ -60,6 +60,19 @@ void setup() {
   Serial.begin(BAUD);
   Serial.println("starting made-invaders main_controller…");
 
+  // initialise the music player
+  if (! musicPlayer.begin()) {
+     Serial.println(F("Couldn't find VS1053, do you have the right pins defined?"));
+     while (1);
+  }
+  Serial.println(F("MP3 OK"));
+
+  if (!SD.begin(CARDCS)) {
+    Serial.println(F("SD failed, or not present"));
+    while (1);  // don't do anything more
+  }
+  Serial.println(F("SD OK"));
+
   // initialize the radio
   radio.initialize(FREQUENCY,NODEID,NETWORKID);
 #ifdef IS_RFM69HW

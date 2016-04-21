@@ -2,6 +2,9 @@
 #define BAUD 115200 // serial baud rate is then contsant accross all devices
 #define RFID_DIGITS 16 // max number of chars to hold an scanned ID
 #define NUM_TARGETS 16 // how many targets do we have
+#define NODE_LOC 1
+#define NODE_MIN 1
+#define NODE_MAX 16
 
 // some unsigned long values for the various timer lengths
 #define RUN_TIMER 30000UL // play time in ms
