@@ -66,12 +66,21 @@ void setup() {
      while (1);
   }
   Serial.println(F("MP3 OK"));
+  musicPlayer.setVolume(1,1);
+  Serial.println(F("Volume Set"));
+  //musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
+  Serial.println(F("playing sine tone"));
+  musicPlayer.sineTest(0x44, 500);    // Make a tone to indicate VS1053 is working
+  delay (250);
 
   if (!SD.begin(CARDCS)) {
     Serial.println(F("SD failed, or not present"));
     while (1);  // don't do anything more
   }
   Serial.println(F("SD OK"));
+
+  Serial.println(F("Playing YOUWIN.MP3"));
+  musicPlayer.playFullFile("FANFARE.MP3");
 
   // initialize the radio
   radio.initialize(FREQUENCY,NODEID,NETWORKID);
