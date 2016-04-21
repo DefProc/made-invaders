@@ -3,7 +3,7 @@
 #include <SPI.h>
 #include <SPIFlash.h>
 #include <avr/wdt.h>
-#include <WirelessHEX69.h>
+//#include <WirelessHEX69.h>
 #include "constants.h"
 #include "secrets.h"
 SdFat sd;
@@ -51,9 +51,6 @@ uint16_t ackCount = 0;
 void loop() {
   if (radio.receiveDone())
   {
-    // allow remote code updates via RFM69
-    CheckForWirelessHEX(radio, flash, true);
-
     // read out any incoming packets
     if (radio.DATALEN = sizeof(Payload)) {
       Serial.print("Sender:[");Serial.print(radio.SENDERID, DEC);Serial.print("] ");
@@ -65,6 +62,7 @@ void loop() {
       Serial.print(F(" timestamp: "));
       Serial.print(theData.timestamp);
       Serial.print("   [RX_RSSI:");Serial.print(radio.RSSI);Serial.print("]");
+      Serial.println();
     } else {
       Serial.println(F("Unknown data: "));
       for (byte i = 0; i < radio.DATALEN; i++) {
@@ -72,15 +70,6 @@ void loop() {
       }
       Serial.println();
     }
-
-    if (radio.ACKRequested())
-    {
-      uint8_t theNodeID = radio.SENDERID;
-      radio.sendACK();
-      Serial.print(" - ACK sent.");
-    }
-    Serial.println();
-    Blink(LED,3);
   }
 }
 
