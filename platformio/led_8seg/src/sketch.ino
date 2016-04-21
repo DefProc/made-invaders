@@ -16,7 +16,8 @@
 #include "constants.h"
 #include "secrets.h"
 
-#define NODEID TIMER
+//#define NODEID TIMER
+#define NODEID SCOREBD
 RFM69 radio;
 Payload theData;
 
@@ -28,8 +29,10 @@ Payload theData;
 #define TIMER_DEFAULT 300 // 30.0 seconds
 #define TIMER_RESOLUTION 10 // 10 ms = 0.01 sec
 #define HOLD_TIME 1000 // ms
-#define DIGITS 3
-#define DECIMAL_PLACES 1
+//#define DIGITS 3
+//#define DECIMAL_PLACES 1
+#define DIGITS 6
+#define DECIMAL_PLACES 0
 
 byte segments[] =
   {
