@@ -21,7 +21,7 @@ SPIFlash flash(FLASH_SS, 0xEF30); //EF30 for windbond 4mbit flash
 // VS1053 connections
 #define VS1053_CS     0      // VS1053 chip select pin (output)
 // DREQ should be an Int pin, see http://arduino.cc/en/Reference/attachInterrupt
-#define DREQ A0       // VS1053 Data request, ideally an Interrupt pin
+#define DREQ 10 // is INT0 on Moteino Mega      // VS1053 Data request, ideally an Interrupt pin
 // No free interrupt pin on the Moteino Mega so trying a non-interupt pin
 #define VS1053_RESET  A1      // VS1053 reset pin (output)
 #define VS1053_DCS    A2      // VS1053 Data/command select pin (output)
@@ -31,8 +31,8 @@ Adafruit_VS1053_FilePlayer musicPlayer =
   Adafruit_VS1053_FilePlayer(VS1053_RESET, VS1053_CS, VS1053_DCS, DREQ, CARDCS);
 
 // button and led connections
-#define START_BUTTON  10
-#define CANCEL_BUTTON 11
+#define START_BUTTON  11
+#define CANCEL_BUTTON 12
 #define START_LED     15
 
 // Lets get the global variables some space
@@ -68,7 +68,6 @@ void setup() {
   Serial.println(F("MP3 OK"));
   musicPlayer.setVolume(1,1);
   Serial.println(F("Volume Set"));
-  //musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
   Serial.println(F("playing sine tone"));
   musicPlayer.sineTest(0x44, 500);    // Make a tone to indicate VS1053 is working
   delay (250);
@@ -79,8 +78,9 @@ void setup() {
   }
   Serial.println(F("SD OK"));
 
-  Serial.println(F("Playing YOUWIN.MP3"));
+  musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
   musicPlayer.playFullFile("FANFARE.MP3");
+  Serial.println(F("Playing YOUWIN.MP3"));
 
   // initialize the radio
   radio.initialize(FREQUENCY,NODEID,NETWORKID);
