@@ -79,8 +79,9 @@ void setup() {
   Serial.println(F("SD OK"));
 
   musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
-  musicPlayer.playFullFile("FANFARE.MP3");
-  Serial.println(F("Playing YOUWIN.MP3"));
+  //musicPlayer.useInterrupt(VS1053_FILEPLAYER_TIMER0_INT); alternative interrupt method
+  musicPlayer.playFullFile("START.MP3"); //new start file
+  Serial.println(F("Playing START.MP3"));
 
   // initialize the radio
   radio.initialize(FREQUENCY,NODEID,NETWORKID);
@@ -107,6 +108,7 @@ uint16_t ackCount = 0;
 void loop() {
   // start the state machine
   if (game_state == IDLE) {
+    
     Serial.println(F("IDLE state"));
     start_time = millis();
     bool nothing_doing = false; // have we sent a "nothing doing" message
@@ -119,6 +121,9 @@ void loop() {
         if (millis() - start_time >= IDLE_TIMER) {
           Serial.println(F("nothing doing"));
           // broadcast NOTHING_DOING to go to idle mode
+          // Play the idle theme but interruptible
+          Serial.println(F("Playing Ed's music that sound like donkey kong country"));
+          musicPlayer.startPlayingFile(LONGTHEME.mp3)
           myPacket.game_uid = 0;
           myPacket.impact_num = 0;
           myPacket.score = 0;
@@ -185,31 +190,41 @@ void loop() {
 
     // then make the countdown
     start_time = millis() + (unsigned long)COUNT_DOWN;
-
+    //delay from last time
+    int mario = 900;
     // wait for it…
     Serial.print(F("5… "));
+    musicPlayer.startPlayingFile("5.MP3");
+    delay(mario);
     myPacket.message_id = DISPLAY_NUM;
     myPacket.score = 5;
     radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
     delay(1000);
     Serial.print(F("4… "));
-    myPacket.message_id = DISPLAY_NUM;
+    musicPlayer.startPlayingFile("4.MP3");
+    delay(mario);
+   myPacket.message_id = DISPLAY_NUM;
     myPacket.score = 4;
     radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
     delay(1000);
     Serial.print(F("3… "));
-    myPacket.message_id = DISPLAY_NUM;
+    musicPlayer.startPlayingFile("MARPIP1.MP3");
+    delay(mario);
+   myPacket.message_id = DISPLAY_NUM;
     myPacket.score = 3;
     radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
     delay(1000);
     Serial.print(F("2… "));
-    myPacket.message_id = DISPLAY_NUM;
+    musicPlayer.startPlayingFile("MARPIP1.MP3");
+    delay(mario);
+   myPacket.message_id = DISPLAY_NUM;
     myPacket.score = 2;
     radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
     delay(800);
     broadcastMessage(GAME_START);
     delay(200);
     Serial.print(F("1… "));
+    musicPlayer.startPlayingFile("MARPIP2.MP3");
     myPacket.message_id = DISPLAY_NUM;
     myPacket.score = 1;
     radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
@@ -220,6 +235,14 @@ void loop() {
 
     game_state = RUNNING;
     Serial.println(F("RUNNING"));
+
+    // Start playing one of the LEVEL.x themes because we are RUNNING
+    // Make a char array of all the level theme music file names
+    // Dont know if this right way to choose a random filename
+    char myLevel[] = {"LEVEL1.MP3","LEVEL2.MP3","LEVEL3.MP3","LEVEL4.MP3"};
+    musicPlayer.startPlayingFile(myLevel[random(5)]);
+
+
   } else if (game_state == RUNNING) {
     // lets' keep this fast, so score updates happen quickly
     checkTargets();
@@ -284,6 +307,8 @@ void loop() {
     delay(250);
   } else if (game_state == END_GAME) {
     Serial.println(F("END_GAME"));
+    // Play the end game sound
+    musicPlayer.playFullFile("EXPLOSION.MP3");
     // stop everything running
     myPacket.score = current_score;
     for (int i=0; i<sizeof(scoremap); i++) {
