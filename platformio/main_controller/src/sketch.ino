@@ -123,7 +123,7 @@ void loop() {
           // broadcast NOTHING_DOING to go to idle mode
           // Play the idle theme but interruptible
           Serial.println(F("Playing Ed's music that sound like donkey kong country"));
-          musicPlayer.startPlayingFile(LONGTHEME.mp3)
+          musicPlayer.startPlayingFile("LONGTHEME.MP3")
           myPacket.game_uid = 0;
           myPacket.impact_num = 0;
           myPacket.score = 0;
@@ -241,7 +241,7 @@ void loop() {
     // Make a char array of all the level theme music file names
     // Dont know if this right way to choose a random filename
     char myLevel[] = {"LEVEL1.MP3","LEVEL2.MP3","LEVEL3.MP3","LEVEL4.MP3"};
-    musicPlayer.startPlayingFile(myLevel[random(5)]);
+    musicPlayer.startPlayingFile(myLevel[random(4)]);
 
 
   } else if (game_state == RUNNING) {
