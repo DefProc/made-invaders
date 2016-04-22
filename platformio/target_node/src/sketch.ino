@@ -32,7 +32,7 @@ uint8_t num_images;
 #define FRAME_DELAY 250
 // Define the array of leds
 CRGB leds[NUM_LEDS];
-// Error messages stored in flash.
+// Error messages stored in flashread16(myFile).
 #define error(msg) sd.errorHalt(F(msg))
 // timer frequency for the ADC
 const unsigned char PS_16 = (1 << ADPS2);
@@ -254,6 +254,9 @@ void loop() {
         test_images = false;
         show_help = true;
         go_to_test_mode = true;
+      } else if (character == 's' || character == 'S') {
+        play_state = RUNNING;
+        startScoring();
       }
     }
 
@@ -509,20 +512,24 @@ void bmpDraw(char *filename, uint8_t x, uint8_t y) {
 
   if (!myFile.isOpen())
   {
-    Serial.print(F("Loading image '"));
-    Serial.print(filename);
-    Serial.println('\'');
+    //Serial.print(F("Loading image '"));
+    //Serial.print(filename);
+    //Serial.println('\'');
     // Open requested file on SD card
     if (!myFile.open(filename, O_READ)) {
       Serial.println(F("File open failed"));
       //sdErrorMessage();
+      //try reinitialise:
+      sd.begin(4,6);
       return;
     }
   }
   else myFile.rewind();
 
   // Parse BMP header
-  if(read16(myFile) == 0x4D42) { // BMP signature
+  uint16_t bmp_sig = read16(myFile);
+  //if(read16(myFile) == 0x4D42) { // BMP signature
+  if(bmp_sig == 0x4D42) { // BMP signature
     Serial.print(F("File size: ")); Serial.println(read32(myFile));
     (void)read32(myFile); // Read & ignore creator bytes
     bmpImageoffset = read32(myFile); // Start of image data
@@ -533,19 +540,19 @@ void bmpDraw(char *filename, uint8_t x, uint8_t y) {
     bmpHeight = read32(myFile);
     if(read16(myFile) == 1) { // # planes -- must be '1'
       bmpDepth = read16(myFile); // bits per pixel
-      Serial.print(F("Bit Depth: ")); Serial.println(bmpDepth);
+      //Serial.print(F("Bit Depth: ")); Serial.println(bmpDepth);
       if((bmpDepth == 24) && (read32(myFile) == 0)) { // 0 = uncompressed
 
         goodBmp = true; // Supported BMP format -- proceed!
-        Serial.print(F("Image size: "));
-        Serial.print(bmpWidth);
-        Serial.print('x');
-        Serial.println(bmpHeight);
+        //Serial.print(F("Image size: "));
+        //Serial.print(bmpWidth);
+        //Serial.print('x');
+        //Serial.println(bmpHeight);
 
-        Serial.print(F("Image offset: "));
-        Serial.print(offsetX);
-        Serial.print(F(", "));
-        Serial.println(offsetY);
+        //Serial.print(F("Image offset: "));
+        //Serial.print(offsetX);
+        //Serial.print(F(", "));
+        //Serial.println(offsetY);
 
         // image smaller than 16x16?
         if ((bmpWidth < ARRAY_WIDTH && bmpWidth > -ARRAY_WIDTH) || (bmpHeight < ARRAY_HEIGHT && bmpHeight > -ARRAY_HEIGHT))
@@ -555,8 +562,8 @@ void bmpDraw(char *filename, uint8_t x, uint8_t y) {
 
         // BMP rows are padded (if needed) to 4-byte boundary
         rowSize = (bmpWidth * 3 + 3) & ~3;;
-        Serial.print(F("Row size: "));
-        Serial.println(rowSize);
+        //Serial.print(F("Row size: "));
+        //Serial.println(rowSize);
 
 
         // If bmpHeight is negative, image is in top-down order.
@@ -645,10 +652,13 @@ void bmpDraw(char *filename, uint8_t x, uint8_t y) {
 
   if (singleGraphic == false || setupActive == true)
   {
-    Serial.println(F("Closing Image..."));
+    //Serial.println(F("Closing Image..."));
     myFile.close();
   }
-  if(!goodBmp) Serial.println(F("Format unrecognized."));
+  if(!goodBmp) {
+    Serial.print(F("Format unrecognized: "));
+    Serial.println(bmp_sig);
+  }
 }
 
 // These read 16- and 32-bit types from the SD card file.
