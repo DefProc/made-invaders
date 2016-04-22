@@ -241,7 +241,7 @@ void loop() {
     // Make a char array of all the level theme music file names
     // Dont know if this right way to choose a random filename
     char myLevel[] = {"LEVEL1.MP3","LEVEL2.MP3","LEVEL3.MP3","LEVEL4.MP3"};
-    musicPlayer.startPlayingFile(myLevel[random(4)]);
+    musicPlayer.startPlayingFile(myLevel[random(0,3)]);
 
 
   } else if (game_state == RUNNING) {
