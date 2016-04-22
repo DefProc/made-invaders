@@ -72,11 +72,11 @@ uint32_t
   frameDelay = FRAME_DELAY, // the time to hold each animation frame
   lastImageUpdate = 0UL, // when did we last change the displayed image
   impactRepeat = 100UL, // debounce timeout for the sensor
-  idleAnimationSpacing = random(5000, 30000);
+  idleAnimationSpacing = 1000;
 volatile uint32_t
   lastButton = 0UL, // when did we last press the button
   lastImpact = 0UL; // when did we last see a hit
-game_states_t play_state = RUNNING;
+game_states_t play_state = IDLE;
 image_state_t image_state = STATIC;
 Payload theData; // incoming message buffer
 
@@ -100,7 +100,7 @@ void setup() {
   FastLED.show();
 
   // start the SD card
-  if (!sd.begin(4, SPI_HALF_SPEED)) {
+  if (!sd.begin(4, 6)) {
     // display an error pattern on SD fail
     for (uint8_t i=0; i<NUM_LEDS; i++) {
       if (i % 2 == 0) {
@@ -290,7 +290,35 @@ void loop() {
 
     // just show a scrolling
     if (millis() - lastImageUpdate >= idleAnimationSpacing) {
-      showImage("title.bmp", 30);
+      // TODO: it sometimes freezes on the animation
+      //showImage("title.bmp", 30);
+      // lets try a pulse instead
+      uint8_t fade_colour = random(5);
+      switch (random(5)) {
+        case 1:
+          fill_solid(leds, NUM_LEDS, CRGB::Magenta);
+          break;
+        case 2:
+          fill_solid(leds, NUM_LEDS, CRGB::Red);
+          break;
+        case 3:
+          fill_solid(leds, NUM_LEDS, CRGB::Yellow);
+          break;
+        case 4:
+          fill_solid(leds, NUM_LEDS, CRGB::Green);
+          break;
+        default:
+          fill_solid(leds, NUM_LEDS, CRGB::White);
+          break;
+      }
+      FastLED.show();
+      for (int i=0; i<10; i++) {
+        leds[i].fadeToBlackBy(64);
+        FastLED.show();
+        delay(10);
+      }
+      fill_solid(leds, NUM_LEDS, CRGB::Black);
+      FastLED.show();
       lastImageUpdate = millis();
       idleAnimationSpacing = random(2500, 30000);
     } else {

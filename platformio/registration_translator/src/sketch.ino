@@ -85,7 +85,7 @@ void loop() {
           break;
       }
     }
-    if (radio.ACKRequested()) {
+    if (radio.ACKRequested() && radio.TARGETID == NODEID) {
       uint8_t theNodeID = radio.SENDERID;
       radio.sendACK();
     }
