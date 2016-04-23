@@ -52,7 +52,7 @@ volatile bool
   take_photo = false;
 
 // set the target scores:
-long scoremap[] = { 10, 20, 50, 100, 1234, 5120, -100, 999, 1024, 512, 256, 128, 200, 865, 6547, 450 };
+long scoremap[] = { 101, 236, 553, 100, 1234, 5120, -100, 999, 1024, 512, 256, 128, 200, 865, 6547, 450 };
 unsigned long hit_record[sizeof(scoremap)];
 
 void setup() {
@@ -195,19 +195,19 @@ void loop() {
     // then make the countdown
     start_time = millis() + (unsigned long)COUNT_DOWN;
     //delay from last time
-    int mario = 50;
+    int mario = 100;
     // wait for it…
     Serial.print(F("5… "));
-    myPacket.message_id = DISPLAY_NUM;
-    myPacket.score = 5;
-    radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 2);
-    musicPlayer.playFullFile("5.MP3");
+    //myPacket.message_id = DISPLAY_NUM;
+    //myPacket.score = 5;
+    //radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 2);
+    //musicPlayer.playFullFile("5.MP3");
     delay(mario/4);
     Serial.print(F("4… "));
     myPacket.message_id = DISPLAY_NUM;
     myPacket.score = 4;
     radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
-    musicPlayer.playFullFile("4.MP3");
+    //musicPlayer.playFullFile("4.MP3");
     delay(mario/4);
     Serial.print(F("3… "));
     myPacket.message_id = DISPLAY_NUM;
@@ -358,12 +358,20 @@ void checkTargets() {
   // *** We need to call this fast enough in-game ***
   if (radio.receiveDone()) {
     // check if we're getting hit data
+    if (radio.ACKRequested() && radio.SENDERID <= NUM_TARGETS) {
+      //uint8_t theNodeID = radio.SENDERID;
+      radio.sendACK();
+    }
     if (radio.DATALEN = sizeof(Payload)) {
       theData = *(Payload*)radio.DATA;
       if (theData.message_id == HIT) {
         uint8_t this_target = radio.SENDERID-1;
-        if (this_target > NUM_TARGETS-1) { this_target = NUM_TARGETS-1; }
-        uint8_t this_score = scoremap[this_target];
+        Serial.print(F("HIT: "));
+        Serial.print(this_target);
+        Serial.print(F(" SCORED: "));
+        Serial.print(scoremap[this_target]);
+        if (this_target >= NUM_TARGETS) { this_target = NUM_TARGETS-1; }
+        long this_score = scoremap[this_target];
         if (game_state == COUNTDOWN) {
           current_score = current_score + (this_score*2);
         } else {
@@ -373,10 +381,6 @@ void checkTargets() {
         update_scoreboard = true;
       }
     }
-    if (radio.ACKRequested() && radio.SENDERID <= NUM_TARGETS) {
-      //uint8_t theNodeID = radio.SENDERID;
-      radio.sendACK();
-    }
-    Blink(LED,3);
+    Blink(START_LED,100);
   }
 }
