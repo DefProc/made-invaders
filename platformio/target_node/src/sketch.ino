@@ -49,6 +49,7 @@ enum image_state_t {
 volatile boolean
   changeImage = true; // should we change the image to the next one?
 boolean
+  game_over = false,
   is_ready_to_play = false,
   show_help = false,
   test_images = false, // should we check the number of images on the SD (slow)
@@ -103,11 +104,7 @@ void setup() {
   if (!sd.begin(4, 6)) {
     // display an error pattern on SD fail
     for (uint8_t i=0; i<NUM_LEDS; i++) {
-      if (i % 2 == 0) {
-        leds[i] = CRGB::Red;
-      } else {
-        leds[i] = CRGB::Black;
-      }
+      showError(1);
     }
     FastLED.show();
     sd.initErrorHalt();
@@ -157,6 +154,12 @@ void setup() {
 
   // if we start RUNNING, start listening for hits
   if (play_state == RUNNING) { startScoring(); }
+}
+
+void showError(uint8_t error_code) {
+  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  fill_solid(leds, error_code, CRGB::Red);
+  FastLED.show();
 }
 
 void startScoring() {
@@ -218,6 +221,7 @@ void loop() {
         Serial.println(F("sent impact message"));
       } else {
         Serial.println(F("no radio message sent"));
+        showError(3);
       }
       //Then show the next character
       // TODO: check the image exists before we call it
@@ -242,8 +246,20 @@ void loop() {
       showImage(filename_buffer, 0, currentFrame, 1);
     }
   } else if (play_state == END_GAME) {
-    fill_solid(leds, NUM_LEDS, CRGB::Black);
-    FastLED.show();
+    if (game_over == true) {
+      // show a red screen for the finish
+      fill_solid(leds, NUM_LEDS, CRGB::Red);
+      for (uint8_t i; i<10; i++) {
+        FastLED.show();
+        delay(100);
+        for (int j; j<NUM_LEDS; j++) {
+          leds[j].fadeToBlackBy(64);
+        }
+      }
+      fill_solid(leds, NUM_LEDS, CRGB::Black);
+      FastLED.show();
+      game_over = false;
+    }
   } else if (play_state == IDLE) {
     bool go_to_test_mode = false;
 
@@ -837,6 +853,9 @@ void checkIncoming() {
           break;
         case GAME_END:
           Serial.println(F("GAME_END"));
+          if (play_state != END_GAME) {
+            game_over = true;
+          }
           play_state = END_GAME;
           stopScoring();
           break;
