@@ -52,7 +52,7 @@ volatile bool
   take_photo = false;
 
 // set the target scores:
-long scoremap[] = { 10, 20, 50, 100, 1234, 5120, -100, 999, 1024, 512, 256, 128, 200, 865, 6547, 450 };
+long scoremap[] = { 101, 236, 553, 100, 1234, 5120, -100, 999, 1024, 512, 256, 128, 200, 865, 6547, 450 };
 unsigned long hit_record[sizeof(scoremap)];
 
 void setup() {
@@ -147,7 +147,7 @@ void loop() {
       player_rfid[i] = tolower(player_rfid[i]);
     }
     // and print to serial so we can see too
-    Serial.print(F("rfid: "));
+    //Serial.print(F("rfid: "));
     Serial.println(player_rfid);
     // copy all the game variables into the right places for sending
     strncpy(myPacket.rfid_num, player_rfid, sizeof(myPacket.rfid_num));
@@ -197,49 +197,47 @@ void loop() {
     //delay from last time
     int mario = 50;
     // wait for it…
-    Serial.print(F("5… "));
-    myPacket.message_id = DISPLAY_NUM;
-    myPacket.score = 5;
-    radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 2);
+    //Serial.print(F("5… "));
+    //myPacket.message_id = DISPLAY_NUM;
+    //myPacket.score = 5;
+    //radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 2);
     musicPlayer.playFullFile("5.MP3");
     delay(mario/4);
-    Serial.print(F("4… "));
-    myPacket.message_id = DISPLAY_NUM;
-    myPacket.score = 4;
-    radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
+    //Serial.print(F("4… "));
+    //myPacket.message_id = DISPLAY_NUM;
+    //myPacket.score = 4;
+    //radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
     musicPlayer.playFullFile("4.MP3");
     delay(mario/4);
-    Serial.print(F("3… "));
-    myPacket.message_id = DISPLAY_NUM;
-    myPacket.score = 3;
-    radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
+    //Serial.print(F("3… "));
+    //myPacket.message_id = DISPLAY_NUM;
+    //myPacket.score = 3;
+    //radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
     musicPlayer.playFullFile("MARPIP1.MP3");
     delay(mario/4);
-    Serial.print(F("2… "));
-    myPacket.message_id = DISPLAY_NUM;
-    myPacket.score = 2;
-    radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
+    //Serial.print(F("2… "));
+    //myPacket.message_id = DISPLAY_NUM;
+    //myPacket.score = 2;
+    //radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
     musicPlayer.playFullFile("MARPIP1.MP3");
-    //delay(mario/10);
+    delay(mario/10);
     broadcastMessage(GAME_START);
-    Serial.print(F("1… "));
-    myPacket.message_id = DISPLAY_NUM;
-    myPacket.score = 1;
-    radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
+    //Serial.print(F("1… "));
+    //myPacket.message_id = DISPLAY_NUM;
+    //myPacket.score = 1;
+    //radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
     musicPlayer.playFullFile("MARPIP1.MP3");
     delay(mario/5);
     game_state = RUNNING;
-    Serial.println(F("RUNNING"));
+    //Serial.println(F("RUNNING"));
     musicPlayer.playFullFile("MARPIP2.MP3");
     // send a directed start message to begin the timer
     myPacket.message_id = GAME_START;
-    radio.sendWithRetry(TIMER, (const void*)&myPacket, sizeof(myPacket), 3);
+    radio.sendWithRetry(TIMER, (const void*)&myPacket, sizeof(myPacket), 5);
 
     // Start playing one of the LEVEL.x themes because we are RUNNING
     // Make a char array of all the level theme music file names
     // Dont know if this right way to choose a random filename
-    //char myLevel[] = {"LEVEL1.MP3","LEVEL2.MP3","LEVEL3.MP3","LEVEL4.MP3"};
-    //musicPlayer.startPlayingFile(myLevel[random(0,3)]);
     //uint8_t chosen_track = random(4);
     //char filename[13];
     //sprintf(filename, "LEVEL%1d.MP3", chosen_track);
@@ -259,11 +257,11 @@ void loop() {
     if (take_photo == true) {
       remaining_game_time = (long)(RUN_TIMER - (millis() - start_time));
       if (remaining_game_time <= RUN_TIMER/2) {
-        Serial.print(F("take a photo with "));
-        Serial.print(remaining_game_time/1000);
-        Serial.println(F(" seconds remaining"));
+        //Serial.print(F("take a photo with "));
+        //Serial.print(remaining_game_time/1000);
+        //Serial.println(F(" seconds remaining"));
         myPacket.message_id = TAKE_PHOTO;
-        radio.sendWithRetry(REG_STN, (const void*)&myPacket, sizeof(myPacket), 2);
+        radio.sendWithRetry(REG_STN, (const void*)&myPacket, sizeof(myPacket), 10);
         take_photo = false;
       }
     }

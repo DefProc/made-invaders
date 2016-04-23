@@ -49,6 +49,7 @@ enum image_state_t {
 volatile boolean
   changeImage = true; // should we change the image to the next one?
 boolean
+  game_over = false,
   is_ready_to_play = false,
   show_help = false,
   test_images = false, // should we check the number of images on the SD (slow)
@@ -103,11 +104,12 @@ void setup() {
   if (!sd.begin(4, 6)) {
     // display an error pattern on SD fail
     for (uint8_t i=0; i<NUM_LEDS; i++) {
-      if (i % 2 == 0) {
-        leds[i] = CRGB::Red;
-      } else {
-        leds[i] = CRGB::Black;
-      }
+      //if (i % 2 == 0) {
+        //leds[i] = CRGB::Red;
+      //} else {
+        //leds[i] = CRGB::Black;
+      //}
+      showError(1);
     }
     FastLED.show();
     sd.initErrorHalt();
@@ -159,6 +161,12 @@ void setup() {
   if (play_state == RUNNING) { startScoring(); }
 }
 
+void showError(uint8_t error_code) {
+  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  fill_solid(leds, error_code, CRGB::Red);
+  FastLED.show();
+}
+
 void startScoring() {
   // Start the fast interrupt for the analog read
   pinMode(A0, INPUT);
@@ -195,6 +203,7 @@ void loop() {
         showImage(filename_buffer, 0, 0, 1);
         is_ready_to_play = true;
       } else {
+        showError(2);
         currentImage++;
         currentImage = currentImage % num_images;
       }
@@ -208,16 +217,25 @@ void loop() {
   } else if (play_state == RUNNING) {
     if (changeImage == true) {
       // change the image (ASAP)
-      // TODO: this is where a better destroy animation should go
       destroy();
       // Then report the hit via the RFM69
       myPacket.message_id = HIT;
       myPacket.impact_num++;
       myPacket.timestamp = millis() - gameStartTime;
-      if (radio.sendWithRetry(MAIN_CTRL, (const void*)(&myPacket), sizeof(myPacket), 5)) {
-        Serial.println(F("sent impact message"));
-      } else {
-        Serial.println(F("no radio message sent"));
+      for (uint8_t i=0; i<10; i++) {
+        // TODO: resend hit message to make sure we get that registered
+        // lets try explicitly sending details
+        if (radio.sendWithRetry(MAIN_CTRL, (const void*)(&myPacket), sizeof(myPacket), 1)) {
+          //Serial.println(F("sent impact message"));
+          Serial.print(F("RAD "));
+          leds[i+1] = CRGB::Green;
+          break;
+        } else {
+          leds[i+1] = CRGB::Red;
+          Serial.print(F("NORAD "));
+          delay(10);
+          //Serial.println(F("no radio message sent"));
+        }
       }
       //Then show the next character
       // TODO: check the image exists before we call it
@@ -242,6 +260,20 @@ void loop() {
       showImage(filename_buffer, 0, currentFrame, 1);
     }
   } else if (play_state == END_GAME) {
+    if (game_over == true) {
+      // show a red screen for the finish
+      fill_solid(leds, NUM_LEDS, CRGB::Red);
+      for (uint8_t i; i<10; i++) {
+        FastLED.show();
+        delay(100);
+        for (int j; j<NUM_LEDS; j++) {
+          leds[j].fadeToBlackBy(64);
+        }
+      }
+      fill_solid(leds, NUM_LEDS, CRGB::Black);
+      FastLED.show();
+      game_over = false;
+    }
     fill_solid(leds, NUM_LEDS, CRGB::Black);
     FastLED.show();
   } else if (play_state == IDLE) {
@@ -316,7 +348,9 @@ void loop() {
       }
       FastLED.show();
       for (int i=0; i<10; i++) {
-        leds[i].fadeToBlackBy(64);
+        for (int j; j<NUM_LEDS; j++) {
+          leds[j].fadeToBlackBy(64);
+        }
         FastLED.show();
         delay(10);
       }
@@ -520,6 +554,7 @@ void bmpDraw(char *filename, uint8_t x, uint8_t y) {
       Serial.println(F("File open failed"));
       //sdErrorMessage();
       //try reinitialise:
+      showError(4);
       sd.begin(4,6);
       return;
     }
@@ -530,12 +565,15 @@ void bmpDraw(char *filename, uint8_t x, uint8_t y) {
   uint16_t bmp_sig = read16(myFile);
   //if(read16(myFile) == 0x4D42) { // BMP signature
   if(bmp_sig == 0x4D42) { // BMP signature
-    Serial.print(F("File size: ")); Serial.println(read32(myFile));
+    //Serial.print(F("File size: "));
+    Serial.println(read32(myFile));
     (void)read32(myFile); // Read & ignore creator bytes
     bmpImageoffset = read32(myFile); // Start of image data
-    Serial.print(F("Image Offset: ")); Serial.println(bmpImageoffset, DEC);
+    //Serial.print(F("Image Offset: "));
+    //Serial.println(bmpImageoffset, DEC);
     // Read DIB header
-    Serial.print(F("Header size: ")); Serial.println(read32(myFile));
+    //Serial.print(F("Header size: "));
+    Serial.println(read32(myFile));
     bmpWidth  = read32(myFile);
     bmpHeight = read32(myFile);
     if(read16(myFile) == 1) { // # planes -- must be '1'
@@ -656,6 +694,7 @@ void bmpDraw(char *filename, uint8_t x, uint8_t y) {
     myFile.close();
   }
   if(!goodBmp) {
+    showError(9);
     Serial.print(F("Format unrecognized: "));
     Serial.println(bmp_sig);
   }
@@ -831,12 +870,19 @@ void checkIncoming() {
       theData = *(Payload*)radio.DATA;
       switch (theData.message_id) {
         case GAME_START:
-          Serial.println(F("GAME_START"));
-          play_state = RUNNING;
-          startScoring();
+          if (radio.SENDERID == MAIN_CTRL) {
+            Serial.println(F("GAME_START"));
+            play_state = RUNNING;
+            startScoring();
+          }
           break;
         case GAME_END:
           Serial.println(F("GAME_END"));
+          if (play_state != END_GAME) {
+            // we've just gone to game over,
+            // so we'll need to set the game over animation
+            game_over = true;
+          }
           play_state = END_GAME;
           stopScoring();
           break;
