@@ -96,14 +96,13 @@ void loop() {
     Serial.println(F("waiting for rfid tag"));
     // we're waiting for an RFID scan
     rfid.seekTag();
+    unsigned long play_repeat = 600000;
+    unsigned long last_played_at = millis() - play_repeat + IDLE_TIMER;
     while (!rfid.available()) {
       if (nothing_doing == false) {
         if (millis() - start_time >= IDLE_TIMER) {
           Serial.println(F("nothing doing"));
           // broadcast NOTHING_DOING to go to idle mode
-          // Play the idle theme but interruptible
-          Serial.println(F("Playing Ed's music that sound like donkey kong country"));
-          mp3.playFile(1,9);
           myPacket.game_uid = 0;
           myPacket.impact_num = 0;
           myPacket.score = 0;
@@ -114,6 +113,13 @@ void loop() {
           myPacket.message_id = NOTHING_DOING;
           broadcastMessage(NOTHING_DOING);
           nothing_doing = true;
+        }
+      } else {
+        if (millis() - last_played_at >= play_repeat) {
+          // Play the idle theme
+          Serial.println(F("Playing Ed's music that sounds like donkey kong country"));
+          mp3.playFile(1,9);
+          last_played_at = millis();
         }
       }
     }
@@ -169,56 +175,35 @@ void loop() {
     update_scoreboard = true; // make sure we get an inital refresh to zero
     take_photo = true;
 
-    //TODO: retry the message to the scoreboard to go into countdown mode.
-
     // then make the countdown
-    // wait for it…
-    // TODO: message the scoreboard to have it do it's own countdown independently
-    //myPacket.message_id = DISPLAY_NUM;
-    //myPacket.score = 5;
-    //radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 2);
+    myPacket.message_id = RUN_COUNTDOWN;
+    myPacket.score = 5;
+    radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
     Serial.print(F("5… "));
     mp3.playFile(1,5);
     long countdown_timer = millis();
     while (millis() - countdown_timer <= 800UL);
-    //myPacket.message_id = DISPLAY_NUM;
-    //myPacket.score = 4;
-    //radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
     mp3.stop();
     mp3.playFile(1,4);
     Serial.print(F("4… "));
-    //delay(mario);
     while (millis() - countdown_timer <= 1800UL);
-    //myPacket.message_id = DISPLAY_NUM;
-    //myPacket.score = 3;
-    //radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
     mp3.stop();
     delay(10);
     mp3.playFile(1,3);
     Serial.print(F("3… "));
-    //delay(mario);
     while (millis() - countdown_timer <= 2800UL);
-    //myPacket.message_id = DISPLAY_NUM;
-    //myPacket.score = 2;
-    //radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
     mp3.stop();
     delay(10);
     mp3.playFile(1,2);
     Serial.print(F("2… "));
-    //delay(mario/2);
-    while (millis() - countdown_timer <= 3500UL);    delay(10);
-    myPacket.message_id = ;
-    myPacket.score = 1;
+    myPacket.message_id = GAME_START;
+    myPacket.timestamp = -1500L;
     radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
     while (millis() - countdown_timer <= 4000UL);
     Serial.print(F("1… "));
-    //myPacket.message_id = DISPLAY_NUM;
-    //myPacket.score = 1;
-    //radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
     mp3.stop();
     delay(10);
     mp3.playFile(1,2);
-    //delay(mario);
     while (millis() - countdown_timer <= 5000UL);
     game_state = RUNNING;
     Serial.println(F("RUNNING"));
@@ -286,11 +271,14 @@ void loop() {
     if (update_scoreboard == true) {
       // just the one hit
       scoreDisplay(current_score);
+      Serial.print(F("end score: "));
+      Serial.println(current_score);
+      Serial.print(F("number of hits: "));
+      Serial.print(number_of_hits);
       game_state = END_GAME;
       update_scoreboard = false;
-    }
-
-    if (millis() - start_time >= RUN_TIMER + EXTRA_TIMER + GRACE_TIMER) {
+    } else if (millis() - start_time >= RUN_TIMER + EXTRA_TIMER + GRACE_TIMER) {
+      scoreDisplay(current_score);
       Serial.print(F("end score: "));
       Serial.println(current_score);
       Serial.print(F("number of hits: "));
@@ -298,8 +286,9 @@ void loop() {
       game_state = END_GAME;
     //} else {
       //Serial.println(millis()-start_time);
+    } else {
+      delay(250);
     }
-    delay(250);
   } else if (game_state == END_GAME) {
     Serial.println(F("END_GAME"));
     // Play the end game sound

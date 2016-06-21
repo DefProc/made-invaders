@@ -15,7 +15,7 @@
 #define RUN_TIMER 30000UL // play time in ms
 #define GRACE_TIMER 250UL // this is a bit of a fude so it *looks* like the game ends at zero
 #define EARLY_PLAY 1000UL
-#define EXTRA_TIMER 10000UL // how much extra time for a zero score
+#define EXTRA_TIMER 30000UL // how much extra time for a zero score
 #define IDLE_TIMER 60000UL // wait a minute before going into attract mode
 #define COUNT_DOWN 5000UL
 
@@ -30,6 +30,7 @@
 
 // set the possible messages (in message_id)
 enum message_t : uint8_t {
+  RUN_COUNTDOWN,
   GAME_START,
   TAKE_PHOTO,
   GAME_END,

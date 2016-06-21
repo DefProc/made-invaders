@@ -29,10 +29,14 @@ Payload theData;
 #define TIMER_DEFAULT 300 // 30.0 seconds
 #define TIMER_RESOLUTION 10 // 10 ms = 0.01 sec
 #define HOLD_TIME 1000 // ms
-//#define DIGITS 3
-//#define DECIMAL_PLACES 1
+
+#if NODEID == SCOREBD
 #define DIGITS 6
 #define DECIMAL_PLACES 0
+#else
+#define DIGITS 3
+#define DECIMAL_PLACES 1
+#endif
 
 byte segments[] =
   {
@@ -103,6 +107,7 @@ void loop() {
       Serial.println(F("  X - stop the current coutdown"));
       Serial.println(F("  Z - zero the timer"));
       Serial.println(F("  D<nnnn> - display (integer)"));
+      Serial.println(F("  C<n> - countdown timer (seconds)"));
     }
 
     // parse any incoming commands
@@ -134,6 +139,11 @@ void loop() {
     if (character == 'D' || character == 'd') {
       long number = Serial.parseInt();
       displayTime(number, 0);
+    }
+
+    if (character == 'C' || character == 'c') {
+      long number = abs(Serial.parseInt()) * 10;
+      run_flag = true;
     }
   }
 
@@ -251,6 +261,12 @@ void checkIncoming() {
           Serial.print(theData.score);
           run_flag = false;
           displayTime(theData.score, 0);
+          break;
+        case RUN_COUNTDOWN:
+          Serial.print(F("RUN_COUNTDOWN"));
+          timer = abs(theData.score) * 10;
+          Serial.println(theData.score);
+          run_flag = true;
           break;
       }
     }
