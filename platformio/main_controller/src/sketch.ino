@@ -96,7 +96,7 @@ void loop() {
     Serial.println(F("waiting for rfid tag"));
     // we're waiting for an RFID scan
     rfid.seekTag();
-    unsigned long play_repeat = 600000;
+    unsigned long play_repeat = 360000;
     unsigned long last_played_at = millis() - play_repeat + IDLE_TIMER;
     while (!rfid.available()) {
       if (nothing_doing == false) {
