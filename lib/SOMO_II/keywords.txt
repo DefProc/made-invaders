@@ -1,0 +1,11 @@
+SOMO_II   KEYWORD1
+begin     KEYWORD2
+feedback  KEYWORD2
+send      KEYWORD2
+playFile  KEYWORD2
+playTrack KEYWORD2
+stop      KEYWORD2
+setVol    KEYWORD2
+volUp     KEYWORD2
+volDown   KEYWORD2
+reset     KEYWORD2
