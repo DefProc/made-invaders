@@ -61,11 +61,13 @@ byte segments[] =
 
 bool run_flag = false;
 bool ready_flag = false;
+bool g_plain_number = false;
+int g_decimal_places = DECIMAL_PLACES;
 unsigned long counter = 0UL;
 long timer = TIMER_DEFAULT;
 
 // prototype for defalt decimal places for display
-void displayTime(long number, int decimalplaces = DECIMAL_PLACES);
+//void displayTime(long number, int decimalplaces = DECIMAL_PLACES, bool plain_number = false);
 
 void setup() {
   Serial.begin(BAUD);
@@ -112,38 +114,62 @@ void loop() {
 
     // parse any incoming commands
     if (character == 'S' || character == 's') {
+      g_decimal_places = DECIMAL_PLACES;
+      g_plain_number = false;
       displayTime(timer);
 
       run_flag = true;
       counter = millis();
+      Serial.println(F("start"));
     }
 
     if (character == 'T' || character == 't') {
       timer = Serial.parseInt();
+      Serial.print(F("timer: "));
+      Serial.print(timer);
+      Serial.println(F("ds"));
     }
 
     if (character == 'r' || character == 'R') {
       run_flag = false;
+      g_decimal_places = DECIMAL_PLACES;
+      g_plain_number = false;
       displayTime(timer);
+      Serial.println(F("reset"));
     }
 
     if (character == 'x' || character == 'X') {
       run_flag = false;
+      Serial.println(F("stop"));
     }
 
     if (character == 'z' || character == '|') {
       run_flag = false;
       displayTime(0);
+      Serial.println(F("zero"));
     }
 
     if (character == 'D' || character == 'd') {
       long number = Serial.parseInt();
-      displayTime(number, 0);
+      g_decimal_places = 0;
+      g_plain_number = true;
+      displayTime(number);
+      run_flag = false;
+      Serial.print(F("will display: "));
+      Serial.println(number);
     }
 
     if (character == 'C' || character == 'c') {
-      long number = abs(Serial.parseInt()) * 10;
+      timer = (Serial.parseInt() * 10);
+      timer = abs(timer) + 9;
+      g_decimal_places = 0;
+      g_plain_number = false;
+      displayTime(timer);
       run_flag = true;
+      counter = millis();
+      Serial.print(F("countdown: "));
+      Serial.print(timer/10);
+      Serial.println(F("s"));
     }
   }
 
@@ -163,8 +189,12 @@ void loop() {
 }
 
 
-void displayTime(long number, int decimal_places) {
+void displayTime(long number) {
   boolean negative = false;
+  if (g_plain_number == false && g_decimal_places == 0) {
+    // we're displaying a time (10ths of a second) but we have no decimal places
+    number = number / 10;
+  }
   digitalWrite(LE,LOW);
   // calculate each digit for sending
   if (number < 0) {
@@ -173,7 +203,7 @@ void displayTime(long number, int decimal_places) {
   }
   for (byte i=0; i<DIGITS; i++) {
     byte output = number % 10;
-    if (i == decimal_places && i != 0) {
+    if (i == g_decimal_places && i != 0) {
       // add decimal place if specified digit
       // but ignore for whole numbers
       shiftOut(SDO, CLK, LSBFIRST, segments[output] | segments[POINT]);
@@ -199,6 +229,11 @@ void checkIncoming() {
   // check any incoming radio messages
   // *** We need to call this fast enough so as humans don't notice ***
   if (radio.receiveDone()) {
+    // send an ack if requested
+    if (radio.ACKRequested()) {
+      uint8_t theNodeID = radio.SENDERID;
+      radio.sendACK();
+    }
     // check if we're getting hit data
     if (radio.DATALEN = sizeof(Payload)) {
       theData = *(Payload*)radio.DATA;
@@ -208,21 +243,21 @@ void checkIncoming() {
           if (NODEID == TIMER) {
             run_flag = false;
             timer = RUN_TIMER/100;
+            g_decimal_places = DECIMAL_PLACES;
+            g_plain_number = false;
             displayTime(timer);
           } else {
             // we aren't a timer, just a display
             run_flag = false;
-            displayTime(0, 0);
+            //displayTime(0, 0);
           }
           break;
         case CANCEL_GAME:
           Serial.println(F("CANCEL"));
           run_flag = false;
-          if (NODEID == TIMER) {
-            displayTime(0);
-          } else {
-            displayTime(0, 0);
-          }
+          g_decimal_places = DECIMAL_PLACES;
+          g_decimal_places = false;
+          displayTime(0);
           break;
         case GAME_START:
           Serial.print(F("GAME_START "));
@@ -230,6 +265,8 @@ void checkIncoming() {
             // only start the timer if it's addressed to us
             // so this will ignore a broadcast GAME_START command
             Serial.println(F("listened"));
+            g_decimal_places = DECIMAL_PLACES;
+            g_plain_number = false;
             displayTime(timer);
             run_flag = true;
             counter = millis();
@@ -244,6 +281,8 @@ void checkIncoming() {
             Serial.println(F("MORE_TIME"));
             run_flag = true;
             timer = EXTRA_TIMER/100;
+            g_decimal_places = DECIMAL_PLACES;
+            g_plain_number = false;
             displayTime(timer);
             counter = millis();
           }
@@ -253,6 +292,8 @@ void checkIncoming() {
           run_flag = false;
           ready_flag = false;
           if (NODEID == TIMER) {
+            g_decimal_places = DECIMAL_PLACES;
+            g_plain_number = false;
             displayTime(0);
           }
           break;
@@ -260,19 +301,24 @@ void checkIncoming() {
           Serial.print(F("DISPLAY_NUM: "));
           Serial.print(theData.score);
           run_flag = false;
-          displayTime(theData.score, 0);
+          g_decimal_places = DECIMAL_PLACES;
+          g_plain_number = true;
+          displayTime(theData.score);
           break;
         case RUN_COUNTDOWN:
           Serial.print(F("RUN_COUNTDOWN"));
-          timer = abs(theData.score) * 10;
+          timer = theData.score * 10;
           Serial.println(theData.score);
+          timer = abs(timer) + 9;
+          g_decimal_places = 0;
+          g_plain_number = false;
+          displayTime(timer);
           run_flag = true;
+          counter = millis();
+          // a little delay to allow the other end to catch up
+          delay(120);
           break;
       }
-    }
-    if (radio.ACKRequested()) {
-      uint8_t theNodeID = radio.SENDERID;
-      radio.sendACK();
     }
   }
 }

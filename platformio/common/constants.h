@@ -30,7 +30,6 @@
 
 // set the possible messages (in message_id)
 enum message_t : uint8_t {
-  RUN_COUNTDOWN,
   GAME_START,
   TAKE_PHOTO,
   GAME_END,
@@ -40,7 +39,8 @@ enum message_t : uint8_t {
   HIT,
   DISPLAY_NUM,
   MORE_TIME,
-  FALSE_START
+  FALSE_START,
+  RUN_COUNTDOWN,
 };
 
 typedef struct {

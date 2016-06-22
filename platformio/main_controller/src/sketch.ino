@@ -179,6 +179,7 @@ void loop() {
     myPacket.message_id = RUN_COUNTDOWN;
     myPacket.score = 5;
     radio.sendWithRetry(SCOREBD, (const void*)&myPacket, sizeof(myPacket), 5);
+    //delay(50);
     Serial.print(F("5… "));
     mp3.playFile(1,5);
     long countdown_timer = millis();
@@ -198,7 +199,8 @@ void loop() {
     Serial.print(F("2… "));
     myPacket.message_id = GAME_START;
     myPacket.timestamp = -1500L;
-    radio.send(SCOREBD, (const void*)&myPacket, sizeof(myPacket));
+    // broadcast game start
+    radio.send(0xFF, (const void*)&myPacket, sizeof(myPacket));
     while (millis() - countdown_timer <= 4000UL);
     Serial.print(F("1… "));
     mp3.stop();
