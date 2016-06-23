@@ -249,7 +249,7 @@ void checkIncoming() {
           } else {
             // we aren't a timer, just a display
             run_flag = false;
-            //displayTime(0, 0);
+            displayTime(0);
           }
           break;
         case CANCEL_GAME:
