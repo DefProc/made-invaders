@@ -164,7 +164,7 @@ void loop() {
     }
   } else if (game_state == COUNTDOWN) {
     Serial.println(F("COUNTDOWN"));
-    // run through the countdown activitie    delay(10);s
+    // run through the countdown activities
     // this state is pretty time critical
 
     // reset all the game counters
@@ -184,16 +184,16 @@ void loop() {
     Serial.print(F("5… "));
     mp3.playFile(1,5);
     long countdown_timer = millis();
-    while (millis() - countdown_timer <= 800UL);
+    while (millis() - countdown_timer <= 1000UL);
     mp3.stop();
     mp3.playFile(1,4);
     Serial.print(F("4… "));
-    while (millis() - countdown_timer <= 1800UL);
+    while (millis() - countdown_timer <= 2000UL);
     mp3.stop();
     delay(10);
     mp3.playFile(1,3);
     Serial.print(F("3… "));
-    while (millis() - countdown_timer <= 2800UL);
+    while (millis() - countdown_timer <= 3000UL);
     mp3.stop();
     delay(10);
     mp3.playFile(1,2);
@@ -202,12 +202,14 @@ void loop() {
     myPacket.timestamp = -1500L;
     // broadcast game start
     radio.send(0xFF, (const void*)&myPacket, sizeof(myPacket));
-    while (millis() - countdown_timer <= 4000UL);
+    while (millis() - countdown_timer <= 4000UL) {
+      checkTargets();
+    }
     Serial.print(F("1… "));
     mp3.stop();
     delay(10);
     mp3.playFile(1,2);
-    while (millis() - countdown_timer <= 5000UL);
+    while(millis() - countdown_timer <= 5000UL);
     game_state = RUNNING;
     Serial.println(F("RUNNING"));
     mp3.stop();
@@ -346,6 +348,8 @@ void checkTargets() {
     if (radio.ACKRequested() && radio.SENDERID <= NUM_TARGETS) {
       //uint8_t theNodeID = radio.SENDERID;
       radio.sendACK();
+      Serial.print(F("ACK "));
+      Serial.println(radio.SENDERID);
     }
     if (radio.DATALEN = sizeof(Payload)) {
       theData = *(Payload*)radio.DATA;
