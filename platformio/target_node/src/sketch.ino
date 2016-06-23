@@ -303,7 +303,6 @@ void loop() {
         Serial.println(F("Testing mode (reset to exit)"));
         Serial.println(F("n<number> to set node_id (1-16)"));
         Serial.println(F("i to recount the number of images"));
-        Serial.println(F("r to show each image in turn"));
         show_help = true;
         play_state = TEST;
     }
@@ -368,24 +367,9 @@ void loop() {
         test_images = true;
       }
 
-      if (character == 'r' || character == 'R') {
-        showError(0);
-        for (int i=0; i<num_images; i++) {
-          delay(100);
-          // run through all the images
-          char filename_buffer[13];
-          sprintf(filename_buffer, "%04d.bmp", i+1);
-          Serial.print("Displaying ");
-          Serial.println(filename_buffer);
-          showImage(filename_buffer, 0, 0, 1);
-          delay(250);
-          showError(i+1);
-        }
-        test_images = false;
-      }
-
       if (character == 'x' || character == 'q' || character == 'X' || character == 'Q') {
-        play_state == IDLE;
+        play_state = IDLE;
+        Serial.println(F("go to IDLE mode"));
       }
     }
 
@@ -405,10 +389,15 @@ void loop() {
         //myFile.close();
         Serial.print(filename_buffer);
         if (sd.exists(filename_buffer)) {
-          leds[i] = CRGB::Yellow;
+          showImage(filename_buffer, 0, 0, 1);
+          delay(250);
+          for (int j=0; j<i; j++) {
+            leds[j] = CRGB::Yellow;
+          }
           FastLED.show();
           Serial.println(F(" exists"));
           num_images++;
+          delay(100);
         } else {
           Serial.println(F(" not found"));
           break;
@@ -429,6 +418,7 @@ void loop() {
       Serial.println(F("Testing mode (reset to exit)"));
       Serial.println(F("n<number> to set node_id (1-16)"));
       Serial.println(F("i to recount the number of images"));
+      Serial.println(F("x|q to quit to IDLE mode"));
       show_help = false;
     }
   } // end of state machine
