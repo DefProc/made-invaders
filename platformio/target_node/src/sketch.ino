@@ -89,7 +89,7 @@ void setup() {
   randomSeed(Entropy.random());
 
   Serial.begin(BAUD);
-  Serial.println("starting radio_test_send");
+  Serial.println("starting target_node v1.1.0");
 
   // set up the ADC sampling speed
   ADCSRA &= ~PS_128;  // remove bits set by Arduino library
