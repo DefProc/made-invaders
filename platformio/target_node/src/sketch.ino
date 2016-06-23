@@ -855,6 +855,11 @@ void checkIncoming() {
   // check any incoming radio messages
   // *** We need to call this fast enough so as humans don't notice ***
   if (radio.receiveDone()) {
+    // send ACK if requested (and it's directed at us only)
+    if (radio.ACKRequested() && radio.TARGETID == node_id) {
+      //uint8_t theNodeID = radio.SENDERID;
+      radio.sendACK();
+    }
     // check if we're getting hit data
     if (radio.DATALEN = sizeof(Payload)) {
       theData = *(Payload*)radio.DATA;
@@ -889,10 +894,6 @@ void checkIncoming() {
           stopScoring();
           break;
       }
-    }
-    if (radio.ACKRequested()) {
-      uint8_t theNodeID = radio.SENDERID;
-      radio.sendACK();
     }
   }
 }
