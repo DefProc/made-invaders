@@ -16,8 +16,8 @@
 #include "constants.h"
 #include "secrets.h"
 
-//#define NODEID TIMER
-#define NODEID SCOREBD
+#define NODEID TIMER
+//#define NODEID SCOREBD
 RFM69 radio;
 Payload theData;
 
