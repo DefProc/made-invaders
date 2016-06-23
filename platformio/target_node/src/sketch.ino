@@ -66,6 +66,7 @@ uint8_t
   numFrames = 1, // how many frames in the image animation?
   currentImage = -1; // which image are we looking at
 uint16_t
+  //currentScore = 0,
   imageWidth = 0,
   imageHeight = 0;
 uint32_t
@@ -103,10 +104,7 @@ void setup() {
   // start the SD card
   if (!sd.begin(4, 6)) {
     // display an error pattern on SD fail
-    for (uint8_t i=0; i<NUM_LEDS; i++) {
-      showError(1);
-    }
-    FastLED.show();
+    showError(1);
     sd.initErrorHalt();
   } else {
     Serial.println(F("SD began"));
@@ -173,7 +171,8 @@ void startScoring() {
   pinMode(3, INPUT);
   attachInterrupt(INT1, piezoInt, FALLING);
 
-  gameStartTime = millis() - 5000UL;
+  gameStartTime = millis() - 1500UL;
+  //currentScore = 0;
 }
 
 void stopScoring() {
@@ -224,20 +223,16 @@ void loop() {
         showError(3);
       }
       //Then show the next character
-      // TODO: check the image exists before we call it
-      //       This shouldn't be too bad, because have checked for an SD card
-      //       and the nubmer of images must be a continuous list, but there's
-      //       always the chance someone's done something funny
-      char filename_buffer[13];
       // TODO: we should at least check that we don't get the same number again
       currentImage = random(0,num_images);
-      currentImage = currentImage % (num_images);
+      char filename_buffer[13];
       sprintf(filename_buffer, "%04d.bmp", currentImage+1);
-      Serial.print("Displaying ");
-      Serial.println(filename_buffer);
-      // show the first frame (if it's an animation)
-      showImage(filename_buffer, 0, 0, 1);
-      changeImage = false;
+      if (sd.exists(filename_buffer)) {
+        Serial.print(F("displaying "));
+        Serial.println(filename_buffer);
+        showImage(filename_buffer, 0, 0, 1);
+        changeImage = false;
+      }
     } else if (image_state != STATIC && millis() - lastImageUpdate >= frameDelay) {
       // we should update the current image if it's an animation at it's time to
       char filename_buffer[13];
@@ -462,6 +457,7 @@ void checkImpact() {
   if (analogRead(A0) >= analogThreshold && millis() - lastImpact >= impactRepeat) {
     changeImage = true;
     lastImpact = millis();
+    //currentScore++;
   }
 }
 
@@ -469,7 +465,8 @@ void piezoInt() {
   if (millis() - lastImpact >= impactRepeat) {
     changeImage = true;
     lastImpact = millis();
-    Serial.println(F("interrupt"));
+    //currentScore++;
+    //Serial.println(F("interrupt"));
   }
 }
 
@@ -543,10 +540,13 @@ void bmpDraw(char *filename, uint8_t x, uint8_t y) {
     //Serial.print(filename);
     //Serial.println('\'');
     // Open requested file on SD card
+    myFile.close();
     if (!myFile.open(filename, O_READ)) {
-      Serial.println(F("File open failed"));
+      Serial.print(F("File open failed "));
+      Serial.println(filename);
       //sdErrorMessage();
       //try reinitialise:
+      showError(1);
       sd.begin(4,6);
       return;
     }
@@ -685,6 +685,7 @@ void bmpDraw(char *filename, uint8_t x, uint8_t y) {
   if(!goodBmp) {
     Serial.print(F("Format unrecognized: "));
     Serial.println(bmp_sig);
+    showError(8);
   }
 }
 
@@ -743,6 +744,7 @@ bool getImageDimensions(char *filename) {
   // Open requested file on SD card
   if (!myFile.open(filename, O_READ)) {
     Serial.println(F("File open failed"));
+    showError(7);
     return false;
   }
 
@@ -860,6 +862,7 @@ void checkIncoming() {
         case GAME_START:
           Serial.println(F("GAME_START"));
           play_state = RUNNING;
+          changeImage = false;
           startScoring();
           break;
         case GAME_END:

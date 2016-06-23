@@ -169,6 +169,7 @@ void loop() {
 
     // reset all the game counters
     current_score = 0;
+    number_of_hits = 0;
     for (int i=0; i<sizeof(scoremap); i++) {
        hit_record[i] = 0;
     }
@@ -262,7 +263,7 @@ void loop() {
         Serial.print(F("end score: "));
         Serial.println(current_score);
         Serial.print(F("number of hits: "));
-        Serial.print(number_of_hits);
+        Serial.println(number_of_hits);
         game_state = END_GAME;
       }
     }
@@ -353,7 +354,7 @@ void checkTargets() {
         Serial.print(F("HIT: "));
         Serial.print(this_target);
         Serial.print(F(" SCORED: "));
-        Serial.print(scoremap[this_target]);
+        Serial.println(scoremap[this_target]);
         if (this_target >= NUM_TARGETS) { this_target = NUM_TARGETS-1; }
         long this_score = scoremap[this_target];
         if (game_state == COUNTDOWN) {
