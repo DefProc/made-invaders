@@ -29,7 +29,7 @@ void setup() {
   radio.setHighPower();
 #endif
   radio.encrypt(ENCRYPTKEY);
-  radio.promiscuous(true);
+  //radio.promiscuous(true);
 }
 
 void loop() {
