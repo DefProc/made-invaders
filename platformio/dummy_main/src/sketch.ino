@@ -9,10 +9,15 @@ RFM69 radio;
 // set the appropiate node ID
 #define NODEID MAIN_CTRL    // The Gateway runs on node 200
 
+// define some contsants for automatic play
+#define PLAY_TIME 30000UL
+#define WAIT_TIME 60000UL
+
 // Lets get the global variables some space
 Payload theData; // somewhere to store any incoming data
 Payload myPacket; // and one for outgoing radio data
 game_states_t game_state = IDLE; // hold the state for game operation
+bool play_auto = true; // should we just run automatically?
 long current_score = 0; // variable to hold the current score
 unsigned long number_of_hits = 0; // we also hold the total number of target hits
 unsigned long start_time = 0; // the millisecond register of the game start time
@@ -72,7 +77,8 @@ void loop() {
 
     Serial.println(F("Ready to play (press \'S\')"));
     // move out of this game state, so we don't do this again
-    game_state = RFID_SCANNED;
+    start_time = millis();
+    game_state = COUNTDOWN;
   } else if (game_state == RUNNING) {
     // lets' keep this fast, so score updates happen quickly
     checkTargets();
@@ -106,9 +112,26 @@ void loop() {
     game_uid++;
 
     // change state so we don't do this again
-    game_state = RFID_SCANNED;
+    game_state = EXTRA_TIME;
     Serial.println(F("Game stopped (press \'R\' to reset)"));
-   }
+  }
+
+  // check if we should be automatically starting to play
+  if (play_auto == true) {
+    // cycle the play state if we're running in auto mode
+    if (game_state == EXTRA_TIME && millis() - start_time >= PLAY_TIME + WAIT_TIME) {
+      // we've been stopped for more than 60 seconds
+      Serial.print(F("AUTO START"));
+      game_state = IDLE;
+    } else if (game_state == COUNTDOWN) {
+      // we've just gone to idle from auto start
+      Serial.println(F("GO!!!"));
+      game_state = RUNNING;
+    } else if (game_state == RUNNING && millis() - start_time >= PLAY_TIME) {
+      Serial.println(F("AUTO STOP"));
+      game_state = END_GAME;
+    }
+  }
 
   // every time through the loop, we'll check for serial instructions
   if (Serial.available() > 0) {
@@ -121,17 +144,25 @@ void loop() {
       Serial.println(F("R - Reset"));
       Serial.println(F("S - Start game"));
       Serial.println(F("X - Stop game"));
+      Serial.println(F("A - run auto (30s games, 60s apart)"));
     } else if (sue == 'r' || sue == 'R') {
       // reset the game
       game_state = IDLE;
+      play_auto = false;
     } else if (sue == 's' || sue == 'S') {
       // start game
       broadcastMessage(GAME_START);
       game_state = RUNNING;
+      play_auto = false;
       Serial.println(F("Game started (press \'X\' to stop)"));
     } else if (sue == 'x' || sue == 'X') {
       // stop game
       game_state = END_GAME;
+      play_auto = false;
+    } else if (sue == 'a' || sue == 'A') {
+      game_state = IDLE;
+      play_auto = true;
+      Serial.println(F("AUTO PLAY ON"));
     }
     while (Serial.available() > 0) {
       // flush any remaining character in the serial buffer
