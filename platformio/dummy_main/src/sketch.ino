@@ -75,7 +75,10 @@ void loop() {
     Serial.println(F("broadcast GET_READY"));
     broadcastMessage(GET_READY);
 
-    Serial.println(F("Ready to play (press \'S\')"));
+    if (play_auto == false) {
+      // only print this message in manual mode
+      Serial.println(F("Ready to play (press \'S\')"));
+    }
     // move out of this game state, so we don't do this again
     start_time = millis();
     game_state = COUNTDOWN;
@@ -124,9 +127,15 @@ void loop() {
       Serial.print(F("AUTO START"));
       game_state = IDLE;
     } else if (game_state == COUNTDOWN) {
-      // we've just gone to idle from auto start
-      Serial.println(F("GO!!!"));
+      // we've just gone reset the board (IDLE MODE)
+      delay(100);
+      broadcastMessage(GAME_START);
       game_state = RUNNING;
+      // tell the timer to start
+      delay(100);
+      myPacket.message_id = GAME_START;
+      radio.send(TIMER, (const void*)&myPacket, sizeof(myPacket));
+      Serial.println(F("GO!!!"));
     } else if (game_state == RUNNING && millis() - start_time >= PLAY_TIME) {
       Serial.println(F("AUTO STOP"));
       game_state = END_GAME;
@@ -155,6 +164,9 @@ void loop() {
       game_state = RUNNING;
       play_auto = false;
       Serial.println(F("Game started (press \'X\' to stop)"));
+      // tell the timer to start
+      myPacket.message_id = GAME_START;
+      radio.send(TIMER, (const void*)&myPacket, sizeof(myPacket));
     } else if (sue == 'x' || sue == 'X') {
       // stop game
       game_state = END_GAME;
