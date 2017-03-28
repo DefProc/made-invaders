@@ -78,7 +78,7 @@ uint32_t
 volatile uint32_t
   lastButton = 0UL, // when did we last press the button
   lastImpact = 0UL; // when did we last see a hit
-game_states_t play_state = IDLE;
+game_states_t play_state = RUNNING; // start the game running, allows demo from power on
 image_state_t image_state = STATIC;
 Payload theData; // incoming message buffer
 
@@ -90,6 +90,20 @@ void setup() {
 
   Serial.begin(BAUD);
   Serial.println("starting target_node v1.1.0");
+
+  // get the node id from EEPROM
+  EEPROM.get(NODE_LOC, node_id);
+  // check it's sensible, or reset to default
+  if (node_id < NODE_MIN || node_id > NODE_MAX) {
+    node_id = NODE_MIN;
+    EEPROM.put(NODE_LOC, node_id);
+  }
+  Serial.print(F("I am target: "));
+  Serial.println(node_id);
+
+  // wait a small amount of time to prevent all the
+  // targets from starting at once
+  delay(100 * node_id);
 
   // set up the ADC sampling speed
   ADCSRA &= ~PS_128;  // remove bits set by Arduino library
@@ -110,16 +124,6 @@ void setup() {
     Serial.println(F("SD began"));
     //sd.ls(LS_R);
   }
-
-  // get the node id from EEPROM
-  EEPROM.get(NODE_LOC, node_id);
-  // check it's sensible, or reset to default
-  if (node_id < NODE_MIN || node_id > NODE_MAX) {
-    node_id = NODE_MIN;
-    EEPROM.put(NODE_LOC, node_id);
-  }
-  Serial.print(F("I am target: "));
-  Serial.println(node_id);
 
   // get the number of images from EEPROM
   EEPROM.get(IMAGE_LOC, num_images);
