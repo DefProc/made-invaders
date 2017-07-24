@@ -4,40 +4,46 @@ You will need:
  - [ ] 15 targets
  - [ ] Timer
  - [ ] Scoreboard
- - [ ] 2× 12v DC supply
  - [ ] Blank boxes ×20
+ - [ ] 2× 12v DC supply
  - [ ] Target power supply
+ - [ ] Extra DC power cables
+ - [ ] long kettle lead for the targets power
  - [ ] 2× Long 2way extensions
  - [ ] Play stand (and bucket o'darts)
- - [ ] RFID tags
- - [ ] Carpet flooring
+ - [ ] the bowl of RFID tags
+ - [ ] 15× Carpet tiles for flooring
  - [ ] Registration station Pi
- - [ ] Pi power supply
- - [ ] Extensions
+ - [ ] RPi power supply
  - [ ] Keyboard
- - [ ] Spare mouse
  - [ ] Monitor (hdmi)
+ - [ ] Monitor power lead
  - [ ] HDMI cable
- - [ ] Network cable
- - [ ] Network switch
- - [ ] Power cable (for switch)
- - [ ] WiFi bridge laptop
- - [ ] 4× Sidestrike nerf guns
- - [ ] 6× Jolt nerf guns
+ - [ ] 4× Sidestrike nerf guns (the green ones)
+ - [ ] 4× Jolt nerf guns (the small ones)
  - [ ] Battery nerf gun
  - [ ] 2× 12 shot clip
  - [ ] 1× 18 shot clip
- - [ ] 2× 6 shot clip
- - [ ] Slide-top nerf gun & thigh holster
- - [ ] Stickers
  - [ ] Pull up banner
- - [ ] Extra DC power cables
- - [ ] T-shirts
  - [ ] Hazard tape
- - [ ] Making tape
  - [ ] Zip ties
  - [ ] 7× Safety glasses
- - [ ] Badges
  - [ ] M6x12 Bolts
  - [ ] M6x15 button cap bolts
  - [ ] M6 nuts
+
+## If available
+
+ - [ ] T-shirts
+ - [ ] Stickers
+ - [ ] Badges
+
+## Maybe
+
+ - [ ] Masking tape
+ - [ ] Network cable
+ - [ ] Network switch
+ - [ ] Extensions
+ - [ ] Power cable (for switch)
+ - [ ] WiFi bridge laptop
+ - [ ] Spare mouse
